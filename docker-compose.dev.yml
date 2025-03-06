@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      - WATCHPACK_POLLING=true
+      - MONGODB_URI=mongodb://mongo:27017/storygame
+      - NEXTAUTH_SECRET=your-secret-key-for-jwt-encryption
+      - NEXTAUTH_URL=http://localhost:3000
+    command: npm run dev
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=storygame
+
+volumes:
+  mongo-data: 
