@@ -5,14 +5,17 @@ import { useSession } from 'next-auth/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
   faPlay, faHeart, faEye, faClock, 
-  faTag, faUser, faCalendar, faChevronLeft, faSpinner
+  faTag, faUser, faCalendar, faChevronLeft, faSpinner, faEdit
 } from '@fortawesome/free-solid-svg-icons'
 import Header from '../../components/Header'
 
 interface Author {
-  id: string
-  name: string
-  image: string
+  id?: string
+  name?: string
+  image?: string
+  email?: string
+  username?: string
+  displayName?: string
 }
 
 interface GameDetails {
@@ -35,8 +38,11 @@ export default function GameDetail() {
   const { id } = router.query
   const { data: session } = useSession()
   const [game, setGame] = useState<GameDetails | null>(null)
+  const [authorData, setAuthorData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [hasLiked, setHasLiked] = useState(false)
+  const [isLiking, setIsLiking] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -47,7 +53,31 @@ export default function GameDetail() {
         return response.json()
       })
       .then(data => {
+        console.log('Game data received:', data)
         setGame(data)
+        
+        // Check what author data looks like
+        console.log('Author data in game:', data.author)
+        
+        // If author is just an ID string or object with ID, fetch author details
+        const authorId = typeof data.author === 'string' 
+          ? data.author 
+          : data.author?.id || data.author?._id;
+          
+        if (authorId) {
+          console.log('Fetching author details for ID:', authorId)
+          // Fetch author details from an API endpoint
+          fetch(`/api/users/${authorId}`)
+            .then(res => res.json())
+            .then(authorData => {
+              console.log('Author details fetched:', authorData)
+              setAuthorData(authorData)
+            })
+            .catch(err => {
+              console.error('Error fetching author details:', err)
+            })
+        }
+        
         setIsLoading(false)
       })
       .catch(error => {
@@ -57,6 +87,119 @@ export default function GameDetail() {
       })
   }, [id])
 
+  // Check if user has already liked the game
+  useEffect(() => {
+    if (!session || !game || !id) return;
+    
+    fetch(`/api/games/${id}/like/check`, {
+      credentials: 'include'
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.hasLiked) {
+          setHasLiked(true);
+        }
+      })
+      .catch(error => {
+        console.error('Error checking like status:', error);
+      });
+  }, [session, game, id]);
+
+  // Determine if current user is the author
+  const isCurrentUserAuthor = () => {
+    if (!session || !session.user) return false
+    
+    // Log available data for debugging
+    console.log('Checking authorship:')
+    console.log('- Session user:', session.user)
+    console.log('- Game author:', game?.author)
+    console.log('- Fetched author data:', authorData)
+    
+    // Get current user identifiers for comparison
+    const currentUserEmail = session.user.email
+    // @ts-ignore - TypeScript doesn't know about id on session.user
+    const currentUserId = session.user.id
+    
+    // Case 1: Author is just an ID string
+    if (typeof game?.author === 'string') {
+      console.log('Author is string ID:', game.author)
+      return (
+        // @ts-ignore - TypeScript doesn't know about id
+        (currentUserId && currentUserId === game.author) ||
+        (authorData?.email && currentUserEmail === authorData.email)
+      )
+    }
+    
+    // Case 2: Author is an object with ID
+    if (game?.author) {
+      // Try various possible ID fields
+      const authorId = game.author.id || 
+                      // @ts-ignore - TypeScript doesn't know about _id
+                      game.author._id || 
+                      undefined
+                      
+      console.log('Author object ID:', authorId)
+      
+      if (authorId) {
+        // Check if current user ID matches author ID
+        // @ts-ignore - TypeScript doesn't know about id
+        const idMatch = currentUserId === authorId || currentUserId === authorId.toString()
+        
+        // Also check if emails match with fetched author data
+        const emailMatch = (
+          currentUserEmail && 
+          (currentUserEmail === game.author.email || currentUserEmail === authorData?.email)
+        )
+        
+        return idMatch || emailMatch
+      }
+    }
+    
+    // Case 3: Try to use authorData directly
+    if (authorData) {
+      // @ts-ignore - TypeScript doesn't know about id
+      return currentUserId === authorData.id || currentUserEmail === authorData.email
+    }
+    
+    // No reliable way to determine authorship
+    return false
+  }
+
+  // Get author name from either the game.author or the fetched authorData
+  const getAuthorDisplayName = () => {
+    // If we have fetched author data, use that first
+    if (authorData) {
+      return authorData.name || authorData.username || authorData.displayName || 'Unknown Author'
+    }
+    
+    // Handle case where author is a string ID
+    if (typeof game?.author === 'string') {
+      return 'Author' // We can't display name until author data loads
+    }
+    
+    // Try to get name from game.author object if it exists
+    if (game?.author?.name) {
+      return game.author.name
+    }
+    
+    return 'Unknown Author'
+  }
+
+  // Get author image from either game.author or fetched authorData
+  const getAuthorImage = () => {
+    // If we have fetched author data, use that first
+    if (authorData?.image) {
+      return authorData.image
+    }
+    
+    // Try to get from game.author if it's an object with an image
+    if (game?.author?.image) {
+      return game.author.image
+    }
+    
+    return null // No image available
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', { 
@@ -65,6 +208,78 @@ export default function GameDetail() {
       day: 'numeric' 
     })
   }
+
+  // Handler for liking and unliking a game
+  const handleLikeToggle = async () => {
+    if (!session) {
+      // Redirect to sign in if not logged in
+      router.push('/auth/signin');
+      return;
+    }
+
+    if (isLiking || !game) return;
+
+    setIsLiking(true);
+    
+    try {
+      // If already liked, unlike the game
+      if (hasLiked) {
+        const response = await fetch(`/api/games/${game.id}/like`, {
+          method: 'DELETE',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to unlike game');
+        }
+
+        // Update local state to reflect the unlike
+        setHasLiked(false);
+        setGame(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            likes: Math.max(0, prev.likes - 1) // Ensure likes don't go below 0
+          };
+        });
+
+        console.log('Game unliked successfully');
+      } 
+      // Otherwise, like the game
+      else {
+        const response = await fetch(`/api/games/${game.id}/like`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to like game');
+        }
+
+        // Update local state to reflect the like
+        setHasLiked(true);
+        setGame(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            likes: prev.likes + 1
+          };
+        });
+
+        console.log('Game liked successfully');
+      }
+    } catch (error) {
+      console.error(`Error ${hasLiked ? 'unliking' : 'liking'} game:`, error);
+    } finally {
+      setIsLiking(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -106,13 +321,13 @@ export default function GameDetail() {
             <div className="game-meta">
               <div className="game-author">
                 <div className="author-avatar">
-                  {game.author?.image ? (
-                    <img src={game.author.image} alt={game.author.name} />
+                  {getAuthorImage() ? (
+                    <img src={getAuthorImage()} alt={getAuthorDisplayName()} />
                   ) : (
                     <FontAwesomeIcon icon={faUser} />
                   )}
                 </div>
-                <span>by {game.author?.name || 'Unknown Author'}</span>
+                <span>by {getAuthorDisplayName()}</span>
               </div>
               
               <div className="game-category">
@@ -143,7 +358,7 @@ export default function GameDetail() {
               </div>
             </div>
             
-            <Link href={`/play/${game.id}`} className="play-button">
+            <Link href={`/play/${game.id}`} className="play-outline-button">
               <FontAwesomeIcon icon={faPlay} /> Play Now
             </Link>
           </div>
@@ -192,13 +407,19 @@ export default function GameDetail() {
             {session && (
               <div className="action-buttons">
                 {/* Only show edit button if user is the author */}
-                {session.user.id === game.author?.id && (
-                  <Link href={`/edit/${game.id}`} className="edit-button">
-                    Edit Game
+                {isCurrentUserAuthor() && (
+                  <Link href={`/edit-game/${game.id}`} className="edit-button">
+                    <FontAwesomeIcon icon={faEdit} /> Edit Game
                   </Link>
                 )}
-                <button className="like-button">
-                  <FontAwesomeIcon icon={faHeart} /> Like
+                
+                <button 
+                  className={`like-button ${hasLiked ? 'liked' : ''}`} 
+                  onClick={handleLikeToggle}
+                  disabled={isLiking}
+                >
+                  <FontAwesomeIcon icon={faHeart} /> 
+                  {hasLiked ? 'Unlike' : 'Like'}
                 </button>
               </div>
             )}
@@ -267,6 +488,10 @@ export default function GameDetail() {
           gap: 1.5rem;
           font-size: 0.9rem;
           color: var(--text-secondary);
+        }
+
+        .game-category {
+          position: relative;
         }
         
         .game-author, .game-category, .game-date {
@@ -428,16 +653,31 @@ export default function GameDetail() {
           justify-content: center;
           gap: 0.5rem;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.3s;
           text-decoration: none;
         }
         
-        .edit-button:hover, .like-button:hover {
+        .edit-button:hover, .like-button:hover:not(:disabled) {
           background-color: rgba(255, 255, 255, 0.2);
         }
         
         .like-button {
           color: var(--primary-color);
+          transition: all 0.3s;
+        }
+        
+        .like-button.liked {
+          background-color: var(--primary-color);
+          color: white;
+        }
+        
+        .like-button.liked:hover:not(:disabled) {
+          background-color: #f44336; /* Red color for unlike hover */
+        }
+        
+        .like-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
         }
         
         .loading-container, .error-container {

@@ -48,6 +48,22 @@ const GameSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  gameType: {
+    type: String,
+    enum: ['webgl', 'html5', 'javascript', 'unity', 'phaser', 'text', 'pixel', 'wasm'],
+    required: true
+  },
+  files: {
+    mainFile: String, // Main entry point (index.html, game.js, etc.)
+    assetFiles: [String], // Array of asset file paths
+    thumbnails: [String] // Screenshot paths
+  },
+  settings: {
+    width: Number,
+    height: Number,
+    fullscreen: Boolean,
+    controls: Object
+  },
 });
 
 export default mongoose.models.Game || mongoose.model('Game', GameSchema); 

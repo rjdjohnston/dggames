@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCompass, faGamepad, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons'
+import { faCompass, faGamepad, faUser, faSignOutAlt, faUpload } from '@fortawesome/free-solid-svg-icons'
 
 export default function Header() {
   const { data: session, status } = useSession()
@@ -36,7 +36,12 @@ export default function Header() {
                     <span className="user-email">{session?.user?.email}</span>
                   </div>
                   <div className="dropdown-divider"></div>
+                  <Link href="/upload-game" className="dropdown-item">
+                    <FontAwesomeIcon icon={faUpload} className="item-icon" />
+                    Upload Game
+                  </Link>
                   <Link href="/profile" className="dropdown-item">
+                    <FontAwesomeIcon icon={faUser} className="item-icon" />
                     Profile
                   </Link>
                   <button onClick={() => signOut()} className="dropdown-item">

@@ -52,7 +52,7 @@ export default function Home() {
               Your choices shape unique narratives in any genre you can imagine.
             </p>
             <div className="cta-buttons">
-              <Link href="/create" className="cta-button primary">
+              <Link href="/upload-game" className="cta-button primary">
                 <FontAwesomeIcon icon={faPlus} className="button-icon" />
                 New Game
               </Link>

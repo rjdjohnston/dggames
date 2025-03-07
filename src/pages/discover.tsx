@@ -106,9 +106,7 @@ export default function Discover() {
       </main>
 
       <style jsx>{`
-        
-        
-        
+           
         @media (max-width: 768px) {
           .discover-header {
             flex-direction: column;
