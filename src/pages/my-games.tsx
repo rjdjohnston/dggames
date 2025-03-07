@@ -174,9 +174,11 @@ export default function MyGames() {
                 </div>
                 <div className="game-info">
                   <h3>{game.title}</h3>
-                  <p className="game-description">{game.description}</p>
+                  <p>{game.description?.length > 250 
+                      ? `${game.description.substring(0, 250)}...` 
+                      : game.description}</p>
                   
-                  <div className="game-progress">
+                  {/* <div className="game-progress">
                     <div className="progress-label">
                       <span>Progress</span>
                       <span>{game.progress}%</span>
@@ -187,7 +189,7 @@ export default function MyGames() {
                         style={{ width: `${game.progress}%` }}
                       ></div>
                     </div>
-                  </div>
+                  </div> */}
                   
                   <div className="game-meta">
                     Last played: {formatDate(game.lastUpdated)}

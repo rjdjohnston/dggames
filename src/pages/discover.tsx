@@ -85,7 +85,9 @@ export default function Discover() {
                     <Link href={`/game/${game.id}`}>
                       <h3>{game.title}</h3>
                     </Link>
-                    <p>{game.description}</p>
+                    <p>{game.description?.length > 250 
+                      ? `${game.description.substring(0, 250)}...` 
+                      : game.description}</p>
                     <div className="game-meta">
                       <span>
                         <FontAwesomeIcon icon={faHeart} /> {game.likes.toLocaleString()}

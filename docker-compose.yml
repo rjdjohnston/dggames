@@ -1,8 +1,40 @@
 version: '3.8'
+
 services:
+  # Next.js web application
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production 
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/dggames
+      - MONGODB_DB=dggames
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # Add any OAuth provider keys if needed
+      # - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      # - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  # MongoDB database
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=dggames
+    restart: unless-stopped
+
+volumes:
+  mongodb_data: 

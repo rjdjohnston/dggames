@@ -5,7 +5,7 @@ import Header from '../../components/Header'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
   faArrowLeft, faSave, faTrash, 
-  faSpinner, faUpload, faExclamationTriangle 
+  faSpinner, faUpload, faExclamationTriangle, faFileCode, faTimesCircle 
 } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link'
 
@@ -69,9 +69,15 @@ export default function EditGame() {
   const [width, setWidth] = useState(800)
   const [height, setHeight] = useState(600)
   const [fullscreen, setFullscreen] = useState(false)
+  const [removeGameFile, setRemoveGameFile] = useState(false)
+  const [removeImageFile, setRemoveImageFile] = useState(false)
+  const [assetFiles, setAssetFiles] = useState<string[]>([])
+  const [removeAssetFiles, setRemoveAssetFiles] = useState<string[]>([])
+  const [newAssetFiles, setNewAssetFiles] = useState<File[]>([])
   
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const assetFilesInputRef = useRef<HTMLInputElement>(null)
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -132,6 +138,15 @@ export default function EditGame() {
         setGameType(data.gameType || '')
         setPreviewImage(data.image || '')
         
+        // Load asset files if they exist
+        if (data.files && data.files.assetFiles && Array.isArray(data.files.assetFiles)) {
+          console.log('Asset files found:', data.files.assetFiles)
+          setAssetFiles(data.files.assetFiles)
+        } else {
+          console.log('No asset files found')
+          setAssetFiles([])
+        }
+        
         if (data.settings) {
           setWidth(data.settings.width || 800)
           setHeight(data.settings.height || 600)
@@ -146,6 +161,19 @@ export default function EditGame() {
         setIsLoading(false)
       })
   }, [id, status])
+
+  // Check if current user is the author
+  useEffect(() => {
+    if (game && session && game.author.id) {
+      // @ts-ignore - id may exist on session.user
+      const currentUserId = session.user?.id
+      
+      if (game.author.id !== currentUserId) {
+        // Not the author, redirect to game page
+        router.push(`/game/${id}`)
+      }
+    }
+  }, [game, session, router, id])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -208,6 +236,31 @@ export default function EditGame() {
     }
   }
 
+  const handleAssetFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    // Convert FileList to array and add to newAssetFiles
+    const filesArray = Array.from(e.target.files);
+    setNewAssetFiles(prev => [...prev, ...filesArray]);
+    
+    // Reset the input to allow selecting the same file again
+    if (assetFilesInputRef.current) {
+      assetFilesInputRef.current.value = '';
+    }
+  };
+  
+  const handleRemoveNewAssetFile = (index: number) => {
+    setNewAssetFiles(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const handleRemoveExistingAssetFile = (filePath: string) => {
+    setRemoveAssetFiles(prev => [...prev, filePath]);
+  };
+  
+  const handleUndoRemoveAssetFile = (filePath: string) => {
+    setRemoveAssetFiles(prev => prev.filter(path => path !== filePath));
+  };
+
   const validateForm = (): boolean => {
     const errors: FormErrors = {}
     
@@ -239,37 +292,54 @@ export default function EditGame() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     
     if (!validateForm()) {
-      return
+      return;
     }
     
     // Check if user is authenticated
     if (!session) {
-      setError('You must be logged in to update a game. Please sign in and try again.')
-      return
+      setError('You must be logged in to update a game. Please sign in and try again.');
+      return;
     }
     
-    console.log('Session data:', session)
-    setIsSaving(true)
+    console.log('Session data:', session);
+    setIsSaving(true);
     
     try {
       // Create FormData for file uploads
-      const formData = new FormData()
-      formData.append('id', id as string)
-      formData.append('title', title)
-      formData.append('description', description)
-      formData.append('category', category)
-      formData.append('gameType', gameType)
+      const formData = new FormData();
+      formData.append('id', id as string);
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('category', category);
+      formData.append('gameType', gameType);
       
       // Optional files
       if (gameFile) {
-        formData.append('gameFile', gameFile)
+        formData.append('gameFile', gameFile);
+        console.log('Attaching game file:', gameFile.name);
       }
       
       if (imageFile) {
-        formData.append('image', imageFile)
+        formData.append('image', imageFile);
+        console.log('Attaching image file:', imageFile.name);
+      }
+      
+      // Add new asset files
+      if (newAssetFiles.length > 0) {
+        newAssetFiles.forEach((file, index) => {
+          formData.append(`assetFile_${index}`, file);
+          console.log(`Attaching asset file ${index}:`, file.name);
+        });
+        formData.append('assetFilesCount', newAssetFiles.length.toString());
+      }
+      
+      // Add asset files to remove
+      if (removeAssetFiles.length > 0) {
+        formData.append('removeAssetFiles', JSON.stringify(removeAssetFiles));
+        console.log('Asset files to remove:', removeAssetFiles);
       }
       
       // Game settings
@@ -277,68 +347,68 @@ export default function EditGame() {
         width,
         height,
         fullscreen
-      }))
+      }));
+      
+      // Indicate if files should be removed
+      formData.append('removeGameFile', removeGameFile.toString());
+      formData.append('removeImageFile', removeImageFile.toString());
+      
+      console.log('File removal flags:', {
+        removeGameFile,
+        removeImageFile,
+        removeAssetFiles
+      });
       
       // Send the update request with explicit headers
-      console.log('Sending PUT request to:', `/api/games/${id}`)
+      console.log('Sending PUT request to:', `/api/games/${id}`);
       const response = await fetch(`/api/games/${id}`, {
         method: 'PUT',
         body: formData,
         credentials: 'include',
-        headers: {
-          // No Content-Type header as the browser sets it for FormData
-          // Include any custom headers your API might need
-          'Accept': 'application/json',
-        }
-      })
+      });
       
-      console.log('Response status:', response.status)
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('Response status:', response.status);
       
       if (!response.ok) {
-        const contentType = response.headers.get('content-type')
-        let errorMessage = `Error: ${response.status} - ${response.statusText}`
-        
-        console.log('Error content type:', contentType)
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `Error: ${response.status} - ${response.statusText}`;
         
         try {
           if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json()
-            console.log('Error data:', errorData)
-            errorMessage = errorData.message || errorMessage
+            const errorData = await response.json();
+            console.log('Error data:', errorData);
+            errorMessage = errorData.message || errorMessage;
           } else {
-            const textError = await response.text()
-            console.log('Error text:', textError)
-            if (textError) errorMessage += ` - ${textError}`
+            const textError = await response.text();
+            console.log('Error text:', textError);
+            if (textError) errorMessage += ` - ${textError}`;
           }
         } catch (parseError) {
-          console.error('Error parsing error response:', parseError)
+          console.error('Error parsing error response:', parseError);
         }
         
-        throw new Error(errorMessage)
+        throw new Error(errorMessage);
       }
       
-      // Show success message (optional)
-      // You could add a toast notification here
+      const responseData = await response.json();
+      console.log('Update successful:', responseData);
       
-      // Redirect to the game detail page instead of going back
-      router.push(`/game/${id}`)
+      // Show success message before redirecting
+      setError('');
+      alert('Game updated successfully!');
+      
+      // Redirect to the game detail page
+      router.push(`/game/${id}`);
       
     } catch (error) {
-      console.error('Error updating game:', error)
+      console.error('Error updating game:', error);
       if (error instanceof Error) {
-        setError(error.message)
+        setError(error.message);
       } else {
-        setError('An unexpected error occurred. Please try again.')
-      }
-      
-      // Additional debugging for network errors
-      if (error instanceof TypeError && error.message.includes('NetworkError')) {
-        console.error('Network error detected. Possible CORS or connection issue.')
-        setError('Network error. Please check your connection and try again.')
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
@@ -391,6 +461,34 @@ export default function EditGame() {
       setError(error instanceof Error ? error.message : 'Failed to delete game. Please try again.')
       setDeleteModalOpen(false)
     }
+  }
+
+  const resetImageInput = () => {
+    if (imageInputRef.current) {
+      imageInputRef.current.value = ''
+    }
+    setImageFile(null)
+  }
+
+  const resetGameFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+    setGameFile(null)
+  }
+
+  const handleRemoveImage = () => {
+    resetImageInput();
+    setPreviewImage('');
+    setRemoveImageFile(true);
+    console.log('Image marked for removal');
+  }
+
+  const handleRemoveGameFile = () => {
+    resetGameFileInput();
+    setRemoveGameFile(true);
+    // Don't set game to null as that removes all game data
+    console.log('Game file marked for removal');
   }
 
   if (status === 'loading' || isLoading) {
@@ -520,7 +618,7 @@ export default function EditGame() {
               </div>
               
               <div className="form-group">
-                <label>Main Game File {game?.files?.mainFile ? '(Leave empty to keep current file)' : ''}</label>
+                <label>Main Game File</label>
                 <div className="file-upload">
                   <input
                     type="file"
@@ -533,14 +631,48 @@ export default function EditGame() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="file-button"
+                    disabled={removeGameFile}
                   >
                     <FontAwesomeIcon icon={faUpload} /> Choose File
                   </button>
                   <span className="file-name">
-                    {gameFile ? gameFile.name : game?.files?.mainFile ? 'Current file will be kept' : 'No file chosen'}
+                    {gameFile ? gameFile.name : 
+                      (game?.files?.mainFile && !removeGameFile) ? 'Current file will be kept' : 
+                      (removeGameFile ? 'File will be removed' : 'No file chosen')}
                   </span>
+                  
+                  {/* Add remove button when there's a file to remove */}
+                  {(gameFile || game?.files?.mainFile) && !removeGameFile && (
+                    <button 
+                      type="button" 
+                      className="remove-file-button"
+                      onClick={handleRemoveGameFile}
+                    >
+                      <FontAwesomeIcon icon={faTimesCircle} /> Remove
+                    </button>
+                  )}
                 </div>
+                {removeGameFile && (
+                  <div className="file-removal-note">
+                    <FontAwesomeIcon icon={faTrash} /> Game file will be removed
+                    <button 
+                      type="button" 
+                      className="undo-button"
+                      onClick={() => setRemoveGameFile(false)}
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
                 {formErrors.file && <div className="error-message">{formErrors.file}</div>}
+                
+                {/* Show current file info if exists */}
+                {game?.files?.mainFile && !removeGameFile && !gameFile && (
+                  <div className="current-file-info">
+                    <FontAwesomeIcon icon={faFileCode} /> Current file: 
+                    <span className="file-path">{game.files.mainFile}</span>
+                  </div>
+                )}
               </div>
               
               <div className="form-row">
@@ -579,13 +711,107 @@ export default function EditGame() {
                   Allow Fullscreen Mode
                 </label>
               </div>
+
+              <div className="form-group">
+                <label>Additional Asset Files</label>
+                <div className="asset-files-container">
+                  {/* Display existing asset files */}
+                  {assetFiles.length > 0 && (
+                    <div className="existing-assets">
+                      <h4>Current Asset Files:</h4>
+                      <ul className="asset-files-list">
+                        {assetFiles.map((filePath, index) => {
+                          const fileName = filePath.split('/').pop() || filePath;
+                          const isMarkedForRemoval = removeAssetFiles.includes(filePath);
+                          
+                          return (
+                            <li key={`asset-${index}`} className={isMarkedForRemoval ? 'marked-for-removal' : ''}>
+                              <div className="asset-file-item">
+                                <FontAwesomeIcon icon={faFileCode} />
+                                <span className="asset-file-name" title={filePath}>
+                                  {fileName}
+                                </span>
+                                
+                                {isMarkedForRemoval ? (
+                                  <button 
+                                    type="button" 
+                                    className="undo-button small"
+                                    onClick={() => handleUndoRemoveAssetFile(filePath)}
+                                  >
+                                    Undo Remove
+                                  </button>
+                                ) : (
+                                  <button 
+                                    type="button" 
+                                    className="remove-file-button small"
+                                    onClick={() => handleRemoveExistingAssetFile(filePath)}
+                                  >
+                                    <FontAwesomeIcon icon={faTimesCircle} />
+                                  </button>
+                                )}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Display newly added asset files */}
+                  {newAssetFiles.length > 0 && (
+                    <div className="new-assets">
+                      <h4>New Asset Files:</h4>
+                      <ul className="asset-files-list">
+                        {newAssetFiles.map((file, index) => (
+                          <li key={`new-asset-${index}`}>
+                            <div className="asset-file-item">
+                              <FontAwesomeIcon icon={faFileCode} />
+                              <span className="asset-file-name" title={file.name}>
+                                {file.name}
+                              </span>
+                              <button 
+                                type="button" 
+                                className="remove-file-button small"
+                                onClick={() => handleRemoveNewAssetFile(index)}
+                              >
+                                <FontAwesomeIcon icon={faTimesCircle} />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Add new asset files button */}
+                  <div className="add-asset-files">
+                    <input
+                      type="file"
+                      multiple
+                      ref={assetFilesInputRef}
+                      onChange={handleAssetFilesChange}
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => assetFilesInputRef.current?.click()}
+                      className="file-button secondary"
+                    >
+                      <FontAwesomeIcon icon={faUpload} /> Add Asset Files
+                    </button>
+                    <span className="hint-text">
+                      Add additional files needed by your game (images, scripts, etc.)
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             <div className="form-sidebar">
               <div className="form-group">
-                <label>Game Thumbnail {game?.image ? '(Leave empty to keep current image)' : ''}</label>
+                <label>Game Thumbnail</label>
                 <div className="image-preview">
-                  {previewImage ? (
+                  {previewImage && !removeImageFile ? (
                     <img src={previewImage} alt="Game thumbnail preview" />
                   ) : (
                     <div className="empty-preview">No image selected</div>
@@ -604,13 +830,42 @@ export default function EditGame() {
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
                     className="file-button"
+                    disabled={removeImageFile}
                   >
                     <FontAwesomeIcon icon={faUpload} /> Choose Image
                   </button>
                   <span className="file-name">
-                    {imageFile ? imageFile.name : game?.image ? 'Current image will be kept' : 'No image chosen'}
+                    {imageFile ? imageFile.name : 
+                      (game?.image && !removeImageFile) ? 'Current image will be kept' : 
+                      (removeImageFile ? 'Image will be removed' : 'No image chosen')}
                   </span>
+                  
+                  {/* Add remove button for image */}
+                  {(imageFile || (game?.image && !removeImageFile)) && (
+                    <button 
+                      type="button" 
+                      className="remove-file-button"
+                      onClick={handleRemoveImage}
+                    >
+                      <FontAwesomeIcon icon={faTimesCircle} /> Remove
+                    </button>
+                  )}
                 </div>
+                {removeImageFile && (
+                  <div className="file-removal-note">
+                    <FontAwesomeIcon icon={faTrash} /> Image will be removed
+                    <button 
+                      type="button" 
+                      className="undo-button"
+                      onClick={() => {
+                        setRemoveImageFile(false);
+                        if (game?.image) setPreviewImage(game.image);
+                      }}
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
                 {formErrors.image && <div className="error-message">{formErrors.image}</div>}
               </div>
               
@@ -798,6 +1053,7 @@ export default function EditGame() {
           align-items: center;
           gap: 1rem;
           margin-top: 0.5rem;
+          flex-wrap: wrap;
         }
         
         .file-button {
@@ -811,6 +1067,7 @@ export default function EditGame() {
           align-items: center;
           gap: 0.5rem;
           transition: background-color 0.3s;
+          white-space: nowrap;
         }
         
         .file-button:hover {
@@ -824,6 +1081,71 @@ export default function EditGame() {
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+        }
+        
+        .remove-file-button {
+          background-color: rgba(244, 67, 54, 0.1);
+          border: 1px solid rgba(244, 67, 54, 0.3);
+          color: #f44336;
+          padding: 0.5rem 0.75rem;
+          border-radius: 4px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          transition: all 0.3s;
+          white-space: nowrap;
+        }
+        
+        .remove-file-button:hover {
+          background-color: rgba(244, 67, 54, 0.2);
+        }
+        
+        .file-removal-note {
+          margin-top: 0.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: #f44336;
+          font-size: 0.9rem;
+          padding: 0.5rem;
+          background-color: rgba(244, 67, 54, 0.05);
+          border-radius: 4px;
+        }
+        
+        .undo-button {
+          background: none;
+          border: none;
+          color: var(--primary-color);
+          cursor: pointer;
+          margin-left: auto;
+          font-weight: 500;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          transition: background-color 0.3s;
+        }
+        
+        .undo-button:hover {
+          background-color: rgba(114, 137, 218, 0.1);
+        }
+        
+        .current-file-info {
+          margin-top: 0.5rem;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 0.9rem;
+          padding: 0.5rem;
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 4px;
+        }
+        
+        .file-path {
+          margin-left: 0.5rem;
+          word-break: break-all;
+          font-family: monospace;
+          font-size: 0.85rem;
         }
         
         .image-preview {
@@ -972,6 +1294,92 @@ export default function EditGame() {
         
         .delete-button:hover {
           background-color: #d32f2f;
+        }
+        
+        .asset-files-container {
+          margin-top: 0.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          padding: 1rem;
+          background-color: rgba(0, 0, 0, 0.2);
+        }
+        
+        .asset-files-list {
+          list-style: none;
+          padding: 0;
+          margin: 0 0 1rem 0;
+        }
+        
+        .asset-file-item {
+          display: flex;
+          align-items: center;
+          padding: 0.5rem;
+          margin-bottom: 0.5rem;
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 4px;
+          gap: 0.5rem;
+        }
+        
+        .asset-file-name {
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 0.9rem;
+        }
+        
+        .remove-file-button.small {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.8rem;
+        }
+        
+        .undo-button.small {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.8rem;
+          color: var(--primary-color);
+          background-color: rgba(114, 137, 218, 0.1);
+        }
+        
+        .add-asset-files {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-top: 0.5rem;
+        }
+        
+        .hint-text {
+          font-size: 0.8rem;
+          color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .file-button.secondary {
+          background-color: rgba(114, 137, 218, 0.1);
+          border: 1px solid rgba(114, 137, 218, 0.3);
+        }
+        
+        .file-button.secondary:hover {
+          background-color: rgba(114, 137, 218, 0.2);
+        }
+        
+        .marked-for-removal .asset-file-item {
+          opacity: 0.6;
+          border: 1px dashed rgba(244, 67, 54, 0.5);
+        }
+        
+        .marked-for-removal .asset-file-name {
+          text-decoration: line-through;
+          color: rgba(255, 255, 255, 0.5);
+        }
+        
+        h4 {
+          font-size: 0.9rem;
+          margin: 0.5rem 0;
+          color: rgba(255, 255, 255, 0.7);
+          font-weight: 500;
+        }
+        
+        .existing-assets, .new-assets {
+          margin-bottom: 1rem;
         }
         
         @media (max-width: 768px) {

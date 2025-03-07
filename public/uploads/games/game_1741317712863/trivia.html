@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trivia Spin</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+            color: #ffffff;
+        }
+        canvas {
+            border: 1px solid #ffffff;
+            background-color: #2d2d2d;
+        }
+        #question-container {
+            margin-top: 20px;
+            display: none;
+        }
+        #question {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .answer-btn {
+            display: block;
+            width: 300px;
+            padding: 10px;
+            margin: 10px auto;
+            background-color: #333;
+            color: #fff;
+            border: 2px solid #00FFFF;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .answer-btn:hover {
+            background-color: #00FFFF;
+            color: #000;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 30px;
+        }
+        #spin-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #FF00FF;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        #spin-btn:hover {
+            background-color: #FF66FF;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div id="score">Score: <span id="score-value">0</span></div>
+        <canvas id="wheel" width="500" height="500"></canvas>
+        <button id="spin-btn">Spin the Wheel!</button>
+        <div id="question-container">
+            <div id="question"></div>
+            <button class="answer-btn" id="answer1"></button>
+            <button class="answer-btn" id="answer2"></button>
+            <button class="answer-btn" id="answer3"></button>
+            <button class="answer-btn" id="answer4"></button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spin-btn');
+        const questionContainer = document.getElementById('question-container');
+        const questionElement = document.getElementById('question');
+        const answerButtons = [
+            document.getElementById('answer1'),
+            document.getElementById('answer2'),
+            document.getElementById('answer3'),
+            document.getElementById('answer4')
+        ];
+        const scoreValue = document.getElementById('score-value');
+
+        const categories = [
+            { name: 'Science', color: '#00FFFF' },
+            { name: 'History', color: '#FFFF00' },
+            { name: 'Entertainment', color: '#FF00FF' },
+            { name: 'Sports', color: '#00FF00' },
+            { name: 'Geography', color: '#FFA500' },
+            { name: 'Art', color: '#FF0000' }
+        ];
+
+        const questions = {
+            'Science': [
+                { q: 'What planet is known as the Red Planet?', a: ['Mars', 'Venus', 'Jupiter', 'Saturn'], correct: 0 }
+            ],
+            'History': [
+                { q: 'Who was the first President of the United States?', a: ['George Washington', 'Thomas Jefferson', 'Abraham Lincoln', 'John Adams'], correct: 0 }
+            ],
+            'Entertainment': [
+                { q: 'Which movie won the Best Picture Oscar in 1998?', a: ['Titanic', 'The Matrix', 'Forrest Gump', 'Jurassic Park'], correct: 0 }
+            ],
+            'Sports': [
+                { q: 'Which country won the FIFA World Cup in 2018?', a: ['France', 'Brazil', 'Germany', 'Argentina'], correct: 0 }
+            ],
+            'Geography': [
+                { q: 'What is the capital of Brazil?', a: ['Brasilia', 'Rio de Janeiro', 'Sao Paulo', 'Buenos Aires'], correct: 0 }
+            ],
+            'Art': [
+                { q: 'Who painted the Mona Lisa?', a: ['Leonardo da Vinci', 'Michelangelo', 'Picasso', 'Van Gogh'], correct: 0 }
+            ]
+        };
+
+        let score = 0;
+        let spinning = false;
+        let angle = 0;
+        let selectedCategory = null;
+
+        function drawWheel() {
+            const arc = Math.PI / 3; // 60 degrees per segment
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < categories.length; i++) {
+                ctx.beginPath();
+                ctx.fillStyle = categories[i].color;
+                ctx.moveTo(250, 250);
+                ctx.arc(250, 250, 250, i * arc, (i + 1) * arc);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.font = '20px Arial';
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(i * arc + arc / 2);
+                ctx.fillText(categories[i].name, 100, 10);
+                ctx.restore();
+            }
+        }
+
+        function spinWheel() {
+            if (spinning) return;
+            spinning = true;
+            spinBtn.style.display = 'none';
+            let speed = 0.2;
+            let deceleration = 0.005;
+            function animate() {
+                angle += speed;
+                speed -= deceleration;
+                ctx.save();
+                ctx.translate(250, 250);
+                ctx.rotate(angle);
+                ctx.translate(-250, -250);
+                drawWheel();
+                ctx.restore();
+                if (speed > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    spinning = false;
+                    const segment = Math.floor(((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI) / (Math.PI / 3));
+                    selectedCategory = categories[segment].name;
+                    showQuestion();
+                }
+            }
+            animate();
+        }
+
+        function showQuestion() {
+            questionContainer.style.display = 'block';
+            const q = questions[selectedCategory][0]; // Single question per category for simplicity
+            questionElement.textContent = q.q;
+            for (let i = 0; i < 4; i++) {
+                answerButtons[i].textContent = q.a[i];
+                answerButtons[i].onclick = () => checkAnswer(i, q.correct);
+            }
+        }
+
+        function checkAnswer(selected, correct) {
+            if (selected === correct) {
+                score += 100;
+                scoreValue.textContent = score;
+                alert('Correct!');
+            } else {
+                alert('Wrong! Game Over. Final Score: ' + score);
+                score = 0;
+                scoreValue.textContent = score;
+            }
+            questionContainer.style.display = 'none';
+            spinBtn.style.display = 'block';
+            drawWheel();
+        }
+
+        spinBtn.addEventListener('click', spinWheel);
+        drawWheel();
+    </script>
+</body>
+</html>

@@ -2,24 +2,12 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
+# Copy package files
+COPY package.json package-lock.json* ./
 RUN npm install
-RUN npm install next-auth bcryptjs --save
-RUN npm install mongodb mongoose --save
-RUN npm cache clean --force && npm install next-auth@latest --save
-RUN npm install @types/next-auth --save-dev
 
-# Copy the rest of the code
-COPY . .
-
-# Create necessary directories
-RUN mkdir -p public
-
-# Make sure node_modules/.bin is in PATH
-ENV PATH /app/node_modules/.bin:$PATH
-
+# Expose the port the app runs on
 EXPOSE 3000
 
-# Use explicit path to next binary
-CMD ["sh", "-c", "node_modules/.bin/next dev"] 
+# Start the application in development mode with hot reloading
+CMD ["npm", "run", "dev"] 
