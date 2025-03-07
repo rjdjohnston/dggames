@@ -3,12 +3,12 @@ import mongoose from 'mongoose';
 const GameSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, 'Please provide a title'],
+    required: [true, 'Please provide a title for this game'],
     maxlength: [100, 'Title cannot be more than 100 characters'],
   },
   description: {
     type: String,
-    required: [true, 'Please provide a description'],
+    required: [true, 'Please provide a description for this game'],
     maxlength: [500, 'Description cannot be more than 500 characters'],
   },
   content: {
@@ -17,11 +17,11 @@ const GameSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    required: [true, 'Please provide a category'],
+    required: [true, 'Please specify a category'],
   },
   image: {
     type: String,
-    default: 'https://picsum.photos/400/225',
+    required: [true, 'Please provide an image URL'],
   },
   author: {
     type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +39,10 @@ const GameSchema = new mongoose.Schema({
   plays: {
     type: Number,
     default: 0,
+  },
+  gameDirName: {
+    type: String,
+    required: true,
   },
   lastUpdated: {
     type: Date,
@@ -59,9 +63,18 @@ const GameSchema = new mongoose.Schema({
     thumbnails: [String] // Screenshot paths
   },
   settings: {
-    width: Number,
-    height: Number,
-    fullscreen: Boolean,
+    width: {
+      type: Number,
+      default: 800,
+    },
+    height: {
+      type: Number,
+      default: 600,
+    },
+    fullscreen: {
+      type: Boolean,
+      default: true,
+    },
     controls: Object
   },
 });

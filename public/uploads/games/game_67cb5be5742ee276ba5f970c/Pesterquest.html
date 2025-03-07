@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!-- saved from url=(0062)https://html-classic.itch.zone/html/9286252-1163203/index.html -->
+<html lang="en-us"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  
+  <title>Pesterquest Rewritten</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="https://html-classic.itch.zone/html/9286252-1163203/manifest.json" crossorigin="use-credentials">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-72x72.png" sizes="72x72" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-128x128.png" sizes="128x128" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-144x144.png" sizes="144x144" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-152x152.png" sizes="152x152" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-192x192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-384x384.png" sizes="384x384" type="image/png">
+  <link rel="icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-512x512.png" sizes="512x512" type="image/png">
+  <!-- ios support -->
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-72x72.png" sizes="72x72" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-96x96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-128x128.png" sizes="128x128" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-144x144.png" sizes="144x144" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-152x152.png" sizes="152x152" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-192x192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-384x384.png" sizes="384x384" type="image/png">
+  <link rel="apple-touch-icon" href="https://html-classic.itch.zone/html/9286252-1163203/icons/icon-512x512.png" sizes="512x512" type="image/png">
+
+  <meta name="theme-color" content="#000">
+
+  <style>
+    html {
+      background: #444;
+      font-family: sans-serif;
+    }
+
+    body, html {
+      overscroll-behavior: none;
+    }
+
+    #canvas, #overlayDiv {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+
+      width: 100%;
+      height: 100%;
+
+      border: 0 none;
+    }
+
+    #canvas {
+      background: #000;
+    }
+
+    .visible {
+      visibility: visible;
+      opacity: 1.0;
+      transition: opacity .1s linear;
+    }
+
+    .hidden {
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0s .25s, opacity .25s linear;
+    }
+
+    #statusDiv, #inputDiv {
+      background: rgba(0, 0, 0, 0.75);
+      width: 50%;
+      margin: auto;
+      min-width: 340px;
+      padding: 10px;
+
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+
+      border-radius: 0 0 5px 5px;
+    }
+
+    #statusTextDiv {
+      overflow: auto;
+      max-height: 40vh;
+      color: #ccc;
+      font-size: 14px;
+    }
+
+    #statusProgress {
+      display: none;
+      width: 100%;
+    }
+
+    #inputDiv {
+      width: 65%;
+      padding-left: 10px;
+      padding-right: 20px;
+    }
+
+    #inputPrompt {
+      color: #eee;
+      font-size: 150%;
+      margin-bottom: 1em;
+      margin-top: 1em;
+
+    }
+
+    #inputText {
+      width: 100%;
+      font-size: 175%;
+      padding: 5px;
+      background: inherit;
+      color: #eee;
+    }
+
+    #inputText:focus {
+      color: #ffffff;
+    }
+
+    #ContextContainer {
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      color: white;
+    }
+
+    #ContextContainer.shown {
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 0px 0px 5px 0px;
+    }
+
+    #ContextButton {
+      text-decoration: none;
+      color: lightgrey;
+      font-size: xx-large;
+      cursor: pointer;
+      user-select: none;
+      -moz-user-select: none;
+      padding: 10px 10px;
+      opacity: .75;
+    }
+
+    #ContextButton:focus {
+      outline: none;
+      color: #ffffff;
+      opacity: 1.0;
+    }
+
+    #ContextMenu a {
+      text-decoration: none;
+      color: lightgrey;
+      background: #444;
+      height: 48px;
+      width: 250px;
+      border-radius: 5px;
+      border: 1px solid lightgrey;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 5px 5px;
+      opacity: 1.0;
+    }
+
+    #ContextMenu a:hover {
+      text-decoration: none;
+      background: #666666;
+      color: #ffffff
+    }
+
+    #presplash {
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: block;
+        margin: auto;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+  </style>
+
+</head>
+
+<body>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1" width="3456" height="1916" style="cursor: default;"></canvas>
+  <div id="overlayDiv"></div>
+
+  
+
+  <div id="ContextContainer">
+    <a id="ContextButton">≡</a><br>
+    <div id="ContextMenu" style="display: none;">
+      <input id="ID_SavegamesImport" type="file" onchange="onSavegamesImport(this)" accept="application/zip" style="display:none">
+      <a href="javascript:document.getElementById(&#39;ID_SavegamesImport&#39;).click();">Import Saves</a>
+      <a href="javascript:onSavegamesExport();">Export Saves</a>
+      <a href="javascript:FSDownload(&#39;/log.txt&#39;, &#39;text/plain&#39;);">Download Log</a>
+      <a href="https://www.renpy.org/" target="_blank">
+          Powered by Ren'Py
+      </a>
+      
+    </div>
+  </div>
+
+  <div id="statusDiv" class="hidden">
+    <div id="statusTextDiv">Loading script...</div>
+    <progress id="statusProgress" value="76" max="77" style="display: block;"></progress>
+  </div>
+
+  <div id="inputDiv" class="hidden">
+    <form id="inputForm">
+      <div id="inputPrompt"></div>
+      <input id="inputText" type="text">
+    </form>
+  </div>
+
+  <script>
+      // The URL to game.zip, relative to the URL of this file.
+      window.gameZipURL = 'game.zip';
+
+      // Register the service worker.
+      if (navigator.serviceWorker) {
+          if (!navigator.serviceWorker.controller) {
+              navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'all' });
+          }
+      }
+  </script>
+  <script src="./Pesterquest_files/renpy-pre.js"></script>
+  <script async="" type="text/javascript" src="./Pesterquest_files/renpy.js"></script>
+
+
+
+
+
+<scribe-shadow id="crxjs-ext" style="position: fixed; width: 0px; height: 0px; top: 0px; left: 0px; z-index: 2147483647; overflow: visible; visibility: visible;"><template shadowrootmode="open"><div id="root-scribe-elem" style="position: fixed; width: 0px; height: 0px; top: 0px; left: 0px; overflow: visible; color: rgb(15, 23, 42);"><div role="region" aria-label="Notifications (F8)" tabindex="-1" style="pointer-events: none;"><ol tabindex="-1" class="fixed bottom-auto right-0 top-0 z-[999999] flex max-h-screen w-[400px] max-w-full p-4"></ol></div></div><link rel="stylesheet" href="chrome-extension://okfkdaglfjjjfefdcppliegebpoegaii/assets/style.css"></template></scribe-shadow></body></html>

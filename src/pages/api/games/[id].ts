@@ -6,6 +6,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
+import AdmZip from 'adm-zip';
 
 // Configure Next.js to handle file uploads
 export const config = {
@@ -180,6 +181,8 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
       description: fields.description?.[0] || game.description,
       category: fields.category?.[0] || game.category,
       lastUpdated: new Date(),
+      // Ensure gameDirName is preserved
+      gameDirName: game.gameDirName || `game_${id}`,
     };
     
     // Update game type if provided
@@ -264,9 +267,15 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
     if (files.gameFile?.[0]) {
       const gameFile = files.gameFile[0];
       
-      // Create game-specific directory
-      const gameDir = `game_${id}`;
-      const gameDirPath = path.join(UPLOADS_DIR, 'games', gameDir);
+      // Use gameDirName from the database if it exists, otherwise create it
+      const gameDirName = game.gameDirName || `game_${id}`;
+      
+      // If gameDirName doesn't exist in the database, add it to updateData
+      if (!game.gameDirName) {
+        updateData.gameDirName = gameDirName;
+      }
+      
+      const gameDirPath = path.join(UPLOADS_DIR, 'games', gameDirName);
       
       // Ensure the directory exists
       if (!fs.existsSync(gameDirPath)) {
@@ -297,7 +306,7 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
       }
       
       // Update game file URL
-      updateData.files.mainFile = `/uploads/games/${gameDir}/${safeFileName}`;
+      updateData.files.mainFile = `/uploads/games/${gameDirName}/${safeFileName}`;
     }
     
     // Handle asset files to remove
@@ -354,51 +363,127 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
 
       console.log('GAME OBJECT:', game);
       
-      // Create game-specific directory
-      const gameDir = `game_${id}`;
-      const gameDirPath = path.join(UPLOADS_DIR, 'games', gameDir);
+      // Use gameDirName from the database if it exists, otherwise create it
+      const gameDirName = game.gameDirName || `game_${id}`;
+      
+      // If gameDirName doesn't exist in the database, add it to updateData
+      if (!game.gameDirName) {
+        updateData.gameDirName = gameDirName;
+      }
+      
+      const gameDirPath = path.join(UPLOADS_DIR, 'games', gameDirName);
       
       // Ensure the directory exists
       if (!fs.existsSync(gameDirPath)) {
         fs.mkdirSync(gameDirPath, { recursive: true });
       }
       
+      // Function to extract zip file and add its contents to asset files
+      const processZipFile = async (zipFilePath: string, fileName: string, gameDirPath: string, gameDirName: string) => {
+        try {
+          console.log(`Processing zip file: ${fileName}`);
+          const zip = new AdmZip(zipFilePath);
+          const zipEntries = zip.getEntries();
+          const extractedFilePaths: string[] = [];
+          
+          // Extract all entries to the game directory, maintaining folder structure
+          for (const entry of zipEntries) {
+            // Skip hidden files
+            if (entry.name.startsWith('.')) {
+              continue;
+            }
+            
+            // Get the full path including any folders
+            const entryPath = entry.entryName;
+            
+            // For directories, just create them and continue
+            if (entry.isDirectory) {
+              const dirPath = path.join(gameDirPath, entryPath);
+              fs.mkdirSync(dirPath, { recursive: true });
+              continue;
+            }
+            
+            // For files, extract them with their folder structure
+            // Extract the file preserving the path
+            zip.extractEntryTo(
+              entry.entryName,  // Entry name with path
+              gameDirPath,      // Target directory
+              true,             // Maintain the entry's path (preserve folder structure)
+              true              // Overwrite existing files
+            );
+            
+            // Add to asset file paths
+            extractedFilePaths.push(`/uploads/games/${gameDirName}/${entryPath}`);
+            console.log(`Extracted: ${entryPath}`);
+          }
+          
+          console.log(`Extracted ${zipEntries.length} files from ${fileName}`);
+          return extractedFilePaths;
+        } catch (error) {
+          console.error(`Error extracting zip file ${fileName}:`, error);
+          return [];
+        }
+      };
+      
       // Process each asset file
       for (let i = 0; i < assetFilesCount; i++) {
         const assetFileKey = `assetFile_${i}`;
         if (files[assetFileKey]?.[0]) {
           const assetFile = files[assetFileKey][0];
-          // Keep the original filename but ensure it's safe
           const originalName = assetFile.originalFilename || `file_${Date.now()}`;
-          const safeFileName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_'); // Remove unsafe characters
           
-          // Use the original filename directly (sanitized)
-          const newPath = path.join(gameDirPath, safeFileName);
-          
-          // Handle file name conflicts by adding a counter if needed
-          let finalPath = newPath;
-          let counter = 1;
-          while (fs.existsSync(finalPath)) {
-            const fileExt = path.extname(safeFileName);
-            const fileName = path.basename(safeFileName, fileExt);
-            const newFileName = `${fileName}_${counter}${fileExt}`;
-            finalPath = path.join(gameDirPath, newFileName);
-            counter++;
+          // Check if the file is a zip file
+          if (originalName.toLowerCase().endsWith('.zip')) {
+            // Process zip file
+            const extractedFiles = await processZipFile(
+              assetFile.filepath, 
+              originalName, 
+              gameDirPath, 
+              gameDirName
+            );
+            
+            // Add all extracted files to the asset files array
+            updateData.files.assetFiles.push(...extractedFiles);
+            
+            // Remove the zip file after extraction
+            if (fs.existsSync(assetFile.filepath)) {
+              fs.unlinkSync(assetFile.filepath);
+            }
+            
+            console.log(`Added ${extractedFiles.length} files from zip: ${originalName}`);
+          } else {
+            // Process regular asset file
+            // Keep the original filename but ensure it's safe
+            const safeFileName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_'); // Remove unsafe characters
+            
+            // Use the original filename directly (sanitized)
+            const newPath = path.join(gameDirPath, safeFileName);
+            
+            // Handle file name conflicts by adding a counter if needed
+            let finalPath = newPath;
+            let counter = 1;
+            while (fs.existsSync(finalPath)) {
+              const fileExt = path.extname(safeFileName);
+              const fileName = path.basename(safeFileName, fileExt);
+              const newFileName = `${fileName}_${counter}${fileExt}`;
+              finalPath = path.join(gameDirPath, newFileName);
+              counter++;
+            }
+            
+            // Move file to its permanent location
+            if (assetFile.filepath !== finalPath) {
+              fs.copyFileSync(assetFile.filepath, finalPath);
+              fs.unlinkSync(assetFile.filepath); // Remove the temp file
+            }
+            
+            // Get the final filename used
+            const finalFileName = path.basename(finalPath);
+            
+            // Add to asset files array with the new path structure
+            const assetFilePath = `/uploads/games/${gameDirName}/${finalFileName}`;
+            updateData.files.assetFiles.push(assetFilePath);
+            console.log('Added asset file:', assetFilePath, '(Original name:', originalName, ')');
           }
-          
-          // Move file to its permanent location
-          if (assetFile.filepath !== finalPath) {
-            fs.copyFileSync(assetFile.filepath, finalPath);
-            fs.unlinkSync(assetFile.filepath); // Remove the temp file
-          }
-          
-          // Get the final filename used
-          const finalFileName = path.basename(finalPath);
-          
-          // Add to asset files array with the new path structure
-          const assetFilePath = `/uploads/games/${gameDir}/${finalFileName}`;
-          updateData.files.assetFiles.push(assetFilePath);
-          console.log('Added asset file:', assetFilePath, '(Original name:', originalName, ')');
         }
       }
     }
@@ -500,28 +585,67 @@ async function handleDeleteGame(req: NextApiRequest, res: NextApiResponse, id: s
       }
     }
     
-    // Delete main game file if it exists
-    if (game.files?.mainFile) {
+    // Delete the entire game directory if it exists
+    if (game.gameDirName) {
       try {
-        const gameFilePath = getLocalPathFromUrl(game.files.mainFile);
-        if (fs.existsSync(gameFilePath)) {
-          fs.unlinkSync(gameFilePath);
+        const gameDirPath = path.join(UPLOADS_DIR, 'games', game.gameDirName);
+        console.log('Attempting to delete game directory:', gameDirPath);
+        
+        if (fs.existsSync(gameDirPath)) {
+          // Use a recursive function to delete directory with all contents
+          const deleteDirectory = (dirPath: string) => {
+            if (fs.existsSync(dirPath)) {
+              fs.readdirSync(dirPath).forEach((file) => {
+                const curPath = path.join(dirPath, file);
+                if (fs.lstatSync(curPath).isDirectory()) {
+                  // Recursive call for directories
+                  deleteDirectory(curPath);
+                } else {
+                  // Delete file
+                  fs.unlinkSync(curPath);
+                }
+              });
+              // Delete the empty directory
+              fs.rmdirSync(dirPath);
+              console.log(`Deleted directory: ${dirPath}`);
+            }
+          };
+          
+          deleteDirectory(gameDirPath);
+          console.log('Game directory deleted successfully:', game.gameDirName);
+        } else {
+          console.log('Game directory not found:', gameDirPath);
         }
       } catch (error) {
-        console.error('Error deleting main game file:', error);
+        console.error('Error deleting game directory:', error);
       }
-    }
-    
-    // Delete all asset files if they exist
-    if (game.files?.assetFiles && Array.isArray(game.files.assetFiles)) {
-      for (const assetFile of game.files.assetFiles) {
+    } else {
+      console.log('No gameDirName found for game:', id);
+      
+      // Fallback: try to delete individual files
+      // Delete main game file if it exists
+      if (game.files?.mainFile) {
         try {
-          const assetFilePath = getLocalPathFromUrl(assetFile);
-          if (fs.existsSync(assetFilePath)) {
-            fs.unlinkSync(assetFilePath);
+          const gameFilePath = getLocalPathFromUrl(game.files.mainFile);
+          if (fs.existsSync(gameFilePath)) {
+            fs.unlinkSync(gameFilePath);
           }
         } catch (error) {
-          console.error('Error deleting asset file:', assetFile, error);
+          console.error('Error deleting main game file:', error);
+        }
+      }
+      
+      // Delete all asset files if they exist
+      if (game.files?.assetFiles && Array.isArray(game.files.assetFiles)) {
+        for (const assetFile of game.files.assetFiles) {
+          try {
+            const assetFilePath = getLocalPathFromUrl(assetFile);
+            if (fs.existsSync(assetFilePath)) {
+              fs.unlinkSync(assetFilePath);
+            }
+          } catch (error) {
+            console.error('Error deleting asset file:', assetFile, error);
+          }
         }
       }
     }

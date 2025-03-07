@@ -6,6 +6,8 @@ import path from 'path';
 import { promises as fsPromises } from 'fs';
 import dbConnect from '../../../lib/mongodb';
 import Game from '../../../models/Game';
+import { ObjectId } from 'mongodb';
+import AdmZip from 'adm-zip';
 
 export const config = {
   api: {
@@ -68,8 +70,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Create a unique directory for this game
-    const gameId = new Date().getTime().toString();
+    const gameId = new ObjectId();
     const gameDirName = `game_${gameId}`;
+    console.log('Creating game with directory name:', gameDirName);
+    
     const gameFullPath = path.join(gamesDir, gameDirName);
     
     await fsPromises.mkdir(gameFullPath, { recursive: true });
@@ -93,6 +97,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Process asset files
     const assetFilePaths: string[] = [];
     
+    // Function to extract zip file and add its contents to asset files
+    const processZipFile = async (zipFilePath: string, fileName: string) => {
+      try {
+        console.log(`Processing zip file: ${fileName}`);
+        const zip = new AdmZip(zipFilePath);
+        const zipEntries = zip.getEntries();
+        
+        // Extract all entries to the game directory, maintaining folder structure
+        for (const entry of zipEntries) {
+          // Skip hidden files
+          if (entry.name.startsWith('.')) {
+            continue;
+          }
+          
+          // Get the full path including any folders
+          const entryPath = entry.entryName;
+          
+          // For directories, just create them and continue
+          if (entry.isDirectory) {
+            const dirPath = path.join(gameFullPath, entryPath);
+            await fsPromises.mkdir(dirPath, { recursive: true });
+            continue;
+          }
+          
+          // For files, extract them with their folder structure
+          // Extract the file preserving the path
+          zip.extractEntryTo(
+            entry.entryName,  // Entry name with path
+            gameFullPath,     // Target directory
+            true,             // Maintain the entry's path (preserve folder structure)
+            true              // Overwrite existing files
+          );
+          
+          // Add to asset file paths
+          assetFilePaths.push(`/uploads/games/${gameDirName}/${entryPath}`);
+          console.log(`Extracted: ${entryPath}`);
+        }
+        
+        console.log(`Extracted ${zipEntries.length} files from ${fileName}`);
+        return true;
+      } catch (error) {
+        console.error(`Error extracting zip file ${fileName}:`, error);
+        return false;
+      }
+    };
+    
     // Handle asset files
     for (const key in files) {
       if (key.startsWith('assetFile_')) {
@@ -102,10 +152,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (assetFile) {
           const assetFilePath = assetFile.filepath;
           const assetFileName = assetFile.originalFilename || path.basename(assetFilePath);
-          const assetFileDest = path.join(gameFullPath, assetFileName);
           
-          await fsPromises.copyFile(assetFilePath, assetFileDest);
-          assetFilePaths.push(`/uploads/games/${gameDirName}/${assetFileName}`);
+          // Check if the file is a zip file
+          if (assetFileName.toLowerCase().endsWith('.zip')) {
+            // Process zip file
+            await processZipFile(assetFilePath, assetFileName);
+          } else {
+            // Process regular asset file
+            const assetFileDest = path.join(gameFullPath, assetFileName);
+            await fsPromises.copyFile(assetFilePath, assetFileDest);
+            assetFilePaths.push(`/uploads/games/${gameDirName}/${assetFileName}`);
+          }
         }
       }
     }
@@ -140,7 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Create game in database
-    const game = new Game({
+    const gameData = {
       title,
       description,
       category,
@@ -160,10 +217,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       plays: 0,
       likes: 0,
       lastUpdated: new Date(),
-      createdAt: new Date()
-    });
+      createdAt: new Date(),
+      gameDirName: gameDirName
+    };
+    
+    console.log('Saving game with data:', JSON.stringify({
+      ...gameData,
+      files: {
+        mainFile: gameData.files.mainFile,
+        assetFiles: `${gameData.files.assetFiles.length} files`,
+        thumbnails: gameData.files.thumbnails
+      }
+    }, null, 2));
+    
+    const game = new Game(gameData);
     
     await game.save();
+    
+    console.log('Game saved successfully with ID:', game._id);
     
     return res.status(201).json({
       success: true,

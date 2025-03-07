@@ -5,7 +5,7 @@ import Header from '../../components/Header'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
   faArrowLeft, faSave, faTrash, 
-  faSpinner, faUpload, faExclamationTriangle, faFileCode, faTimesCircle 
+  faSpinner, faUpload, faExclamationTriangle, faFileCode, faTimesCircle, faFileArchive 
 } from '@fortawesome/free-solid-svg-icons'
 import Link from 'next/link'
 
@@ -57,6 +57,8 @@ export default function EditGame() {
   const [error, setError] = useState('')
   const [formErrors, setFormErrors] = useState<FormErrors>({})
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
   
   // Form state
   const [title, setTitle] = useState('')
@@ -206,26 +208,26 @@ export default function EditGame() {
     if (!file) return
 
     // Validate file type based on game type
-    let isValid = false
+    // let isValid = false
     
-    switch (gameType) {
-      case 'html5':
-        isValid = file.type === 'text/html' || file.name.endsWith('.html')
-        break
-      case 'unity':
-        isValid = file.name.endsWith('.unity3d') || file.type === 'application/octet-stream'
-        break
-      case 'flash':
-        isValid = file.name.endsWith('.swf') || file.type === 'application/x-shockwave-flash'
-        break
-      default:
-        isValid = true
-    }
+    // switch (gameType) {
+    //   case 'html5':
+    //     isValid = file.type === 'text/html' || file.name.endsWith('.html')
+    //     break
+    //   case 'unity':
+    //     isValid = file.name.endsWith('.unity3d') || file.type === 'application/octet-stream'
+    //     break
+    //   case 'flash':
+    //     isValid = file.name.endsWith('.swf') || file.type === 'application/x-shockwave-flash'
+    //     break
+    //   default:
+    //     isValid = true
+    // }
 
-    if (!isValid) {
-      setFormErrors({...formErrors, file: 'Please upload a valid game file for the selected game type'})
-      return
-    }
+    // if (!isValid) {
+    //   setFormErrors({...formErrors, file: 'Please upload a valid game file for the selected game type'})
+    //   return
+    // }
 
     setGameFile(file)
     
@@ -395,10 +397,13 @@ export default function EditGame() {
       
       // Show success message before redirecting
       setError('');
-      alert('Game updated successfully!');
+      setSuccessMessage('Game updated successfully!');
+      setShowSuccessNotification(true);
       
-      // Redirect to the game detail page
-      router.push(`/game/${id}`);
+      // Redirect after a short delay
+      setTimeout(() => {
+        router.push(`/game/${id}`);
+      }, 2000);
       
     } catch (error) {
       console.error('Error updating game:', error);
@@ -768,6 +773,9 @@ export default function EditGame() {
                               <FontAwesomeIcon icon={faFileCode} />
                               <span className="asset-file-name" title={file.name}>
                                 {file.name}
+                                {file.name.toLowerCase().endsWith('.zip') && (
+                                  <span className="zip-badge">ZIP</span>
+                                )}
                               </span>
                               <button 
                                 type="button" 
@@ -791,6 +799,7 @@ export default function EditGame() {
                       ref={assetFilesInputRef}
                       onChange={handleAssetFilesChange}
                       style={{ display: 'none' }}
+                      accept=".png,.jpg,.jpeg,.gif,.svg,.js,.css,.html,.json,.txt,.zip"
                     />
                     <button
                       type="button"
@@ -799,9 +808,14 @@ export default function EditGame() {
                     >
                       <FontAwesomeIcon icon={faUpload} /> Add Asset Files
                     </button>
-                    <span className="hint-text">
-                      Add additional files needed by your game (images, scripts, etc.)
-                    </span>
+                    <div className="hint-container">
+                      <span className="hint-text">
+                        Add additional files needed by your game (images, scripts, etc.)
+                      </span>
+                      <div className="zip-info">
+                        <FontAwesomeIcon icon={faFileArchive} /> You can also upload a ZIP file containing multiple assets
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -907,6 +921,24 @@ export default function EditGame() {
                 <button onClick={handleDelete} className="delete-button">
                   Delete Game
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Success Notification */}
+        {showSuccessNotification && (
+          <div className="notification-overlay">
+            <div className="success-notification">
+              <div className="success-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                  <path d="M0 0h24v24H0V0z" fill="none"/>
+                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                </svg>
+              </div>
+              <div className="notification-content">
+                <h4 className="notification-title">Success!</h4>
+                <p className="notification-message">{successMessage}</p>
               </div>
             </div>
           </div>
@@ -1347,18 +1379,23 @@ export default function EditGame() {
           margin-top: 0.5rem;
         }
         
+        .hint-container {
+          margin-top: 0.5rem;
+        }
+        
         .hint-text {
           font-size: 0.8rem;
           color: rgba(255, 255, 255, 0.5);
+          display: block;
         }
         
-        .file-button.secondary {
-          background-color: rgba(114, 137, 218, 0.1);
-          border: 1px solid rgba(114, 137, 218, 0.3);
-        }
-        
-        .file-button.secondary:hover {
-          background-color: rgba(114, 137, 218, 0.2);
+        .zip-info {
+          margin-top: 0.3rem;
+          font-size: 0.8rem;
+          color: var(--primary-color);
+          display: flex;
+          align-items: center;
+          gap: 0.3rem;
         }
         
         .marked-for-removal .asset-file-item {
@@ -1382,6 +1419,18 @@ export default function EditGame() {
           margin-bottom: 1rem;
         }
         
+        .zip-badge {
+          display: inline-block;
+          background-color: var(--primary-color);
+          color: white;
+          font-size: 0.7rem;
+          padding: 0.1rem 0.3rem;
+          border-radius: 3px;
+          margin-left: 0.5rem;
+          font-weight: bold;
+          vertical-align: middle;
+        }
+        
         @media (max-width: 768px) {
           .form-grid {
             grid-template-columns: 1fr;
@@ -1394,6 +1443,79 @@ export default function EditGame() {
           
           .form-row {
             grid-template-columns: 1fr;
+          }
+        }
+        
+        .notification-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding-top: 2rem;
+          z-index: 1000;
+          pointer-events: none;
+        }
+        
+        .success-notification {
+          background-color: #10B981; /* Tailwind green-500 */
+          color: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+          display: flex;
+          align-items: center;
+          padding: 1rem 1.5rem;
+          max-width: 24rem;
+          animation: slideDown 0.3s ease-out forwards, fadeOut 0.5s ease-out 1.5s forwards;
+          pointer-events: auto;
+        }
+        
+        .success-icon {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 9999px;
+          padding: 0.5rem;
+          margin-right: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .notification-content {
+          flex: 1;
+        }
+        
+        .notification-title {
+          font-weight: 600;
+          margin: 0 0 0.25rem 0;
+          color: white;
+        }
+        
+        .notification-message {
+          margin: 0;
+          font-size: 0.875rem;
+          opacity: 0.9;
+        }
+        
+        @keyframes slideDown {
+          from {
+            transform: translateY(-1rem);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
           }
         }
       `}</style>
