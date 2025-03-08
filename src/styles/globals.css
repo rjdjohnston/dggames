@@ -1,5 +1,5 @@
 @tailwind base;
-@tailwind components;
+/* @tailwind components; */
 @tailwind utilities;
 
 :root {
@@ -26,7 +26,6 @@ body {
 
 .container {
     min-height: 100vh;
-    background-color: var(--background-dark);
     color: var(--text-color);
   }
 
@@ -103,25 +102,36 @@ body {
   }
 
   .nav-icon {
-    font-size: 0.9rem;
+    font-size: 1.5rem;
   }
 
   main {
-    max-width: 1200px;
+    max-width: 90%;
     margin: 0 auto;
     padding: 2rem;
   }
 
   .hero-section {
     display: flex;
-    gap: 2rem;
     align-items: center;
-    margin-bottom: 4rem;
+    justify-content: space-between;
+    padding: 4rem 2rem;
+    min-height: 60vh;
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(10, 10, 20, 0.7);
+    backdrop-filter: blur(3px);
+    border-radius: 8px;
+    margin: 2rem 1rem;
   }
-
+  
   .hero-content {
     flex: 1;
+    max-width: 600px;
+    z-index: 2;
   }
+
+  
 
   h1 {
     font-size: 3rem;
@@ -135,22 +145,22 @@ body {
 
   .hero-description {
     font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 2rem;
     line-height: 1.6;
+    margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.9);
   }
-
+  
   .cta-buttons {
     display: flex;
     gap: 1rem;
   }
-
+  
   .cta-button {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.8rem 1.5rem;
-    border-radius: 8px;
+    border-radius: 4px;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -182,11 +192,13 @@ body {
     flex: 1;
     display: flex;
     justify-content: center;
+    align-items: center;
+    z-index: 1;
   }
-
+  
   .hero-image img {
     max-width: 100%;
-    border-radius: 10px;
+    border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   }
 
@@ -226,7 +238,7 @@ body {
 
 /* Game Container Styles */
 .game-container {
-    margin-top: 2rem;
+    /* margin-top: 2rem; */
 }
 
 .story-area {
@@ -468,6 +480,39 @@ textarea {
   }
 
 /* Responsive adjustments */
+/* sm: 640px and up */
+@media (min-width: 640px) {
+  /* Small screen styles */  
+}
+
+/* md: 768px and up */
+@media (min-width: 768px) {
+  /* Medium screen styles */
+}
+
+/* lg: 1024px and up */
+@media (min-width: 1024px) {
+  /* Large screen styles */
+}
+
+/* xl: 1280px and up */
+@media (min-width: 1280px) {
+  /* Extra large screen styles */
+}
+
+/* 2xl: 1536px and up */
+@media (min-width: 1536px) {
+  /* 2X-Large screen styles */
+}
+
+/* Mobile-first (smaller screens) */
+@media (max-width: 639px) {
+  /* Extra small screen styles */
+  main {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
     .discover-header {
         flex-direction: column;
@@ -481,6 +526,21 @@ textarea {
     .story-grid {
         grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     }
+}
+
+/* Tablet (portrait) */
+@media (max-width: 1023px) {
+  /* Tablet portrait styles */
+}
+
+/* Tablet (landscape) and smaller desktops */
+@media (max-width: 1279px) {
+  /* Tablet landscape styles */
+}
+
+/* Larger screens */
+@media (max-width: 1535px) {
+  /* Larger screen styles */
 }
 
 /* ... rest of your existing CSS ... */

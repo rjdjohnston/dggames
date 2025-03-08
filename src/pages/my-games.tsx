@@ -119,112 +119,133 @@ export default function MyGames() {
     <div className="container mx-auto">
       <Header />
 
-      <main>
-    {/* <div className="my-games-container"> */}
-      <header className="page-header">
-        <h1>My Games</h1>
-        <Link href="/upload-game" className="create-button">
-          <FontAwesomeIcon icon={faPlus} /> New Game
-        </Link>
-      </header>
+      <main className="main-content">
+        <div className="parallax-background"></div>
+        
+        <section className="my-games-section">
+          <header className="page-header">
+            <h1>My Games</h1>
+            <Link href="/upload-game" className="create-button">
+              <FontAwesomeIcon icon={faPlus} /> New Game
+            </Link>
+          </header>
 
-      {games.length === 0 ? (
-        <div className="empty-state">
-          <h2>You haven't created any games yet</h2>
-          <p>Start your first adventure by creating a new game!</p>
-          <Link href="/upload-game" className="empty-state-button">
-            <FontAwesomeIcon icon={faPlus} /> Create Your First Game
-          </Link>
-        </div>
-      ) : (
-        <div className="games-grid">
-          {games.map((game) => {
-            const gameId = game.id || game._id;
-            return (
-              <div key={gameId} className="game-card">
-                <div className="game-image">
-                  <img src={game.image} alt={game.title} />
-                  <div className="game-category">{game.category}</div>
-                  <div className="game-actions">
-                    <button 
-                      className="action-button play"
-                      onClick={() => {
-                        console.log('Play button clicked with ID:', gameId);
-                        handlePlay(gameId as string);
-                      }}
-                      aria-label="Play game"
-                    >
-                      <FontAwesomeIcon icon={faPlay} />
-                    </button>
-                    <button 
-                      className="action-button edit"
-                      onClick={() => handleEdit(gameId as string)}
-                      aria-label="Edit game"
-                    >
-                      <FontAwesomeIcon icon={faEdit} />
-                    </button>
-                    <button 
-                      className="action-button delete"
-                      onClick={() => openDeleteModal(gameId as string)}
-                      aria-label="Delete game"
-                    >
-                      <FontAwesomeIcon icon={faTrash} />
-                    </button>
-                  </div>
-                </div>
-                <div className="game-info">
-                  <h3>{game.title}</h3>
-                  <p>{game.description?.length > 250 
-                      ? `${game.description.substring(0, 250)}...` 
-                      : game.description}</p>
-                  
-                  {/* <div className="game-progress">
-                    <div className="progress-label">
-                      <span>Progress</span>
-                      <span>{game.progress}%</span>
+          {games.length === 0 ? (
+            <div className="empty-state">
+              <h2>You haven't created any games yet</h2>
+              <p>Start your first adventure by creating a new game!</p>
+              <Link href="/upload-game" className="empty-state-button">
+                <FontAwesomeIcon icon={faPlus} /> Create Your First Game
+              </Link>
+            </div>
+          ) : (
+            <div className="games-grid">
+              {games.map((game) => {
+                const gameId = game.id || game._id;
+                return (
+                  <div key={gameId} className="game-card">
+                    <div className="game-image">
+                      <img src={game.image} alt={game.title} />
+                      <div className="game-category">{game.category}</div>
+                      <div className="game-actions">
+                        <button 
+                          className="action-button play"
+                          onClick={() => {
+                            console.log('Play button clicked with ID:', gameId);
+                            handlePlay(gameId as string);
+                          }}
+                          aria-label="Play game"
+                        >
+                          <FontAwesomeIcon icon={faPlay} />
+                        </button>
+                        <button 
+                          className="action-button edit"
+                          onClick={() => handleEdit(gameId as string)}
+                          aria-label="Edit game"
+                        >
+                          <FontAwesomeIcon icon={faEdit} />
+                        </button>
+                        <button 
+                          className="action-button delete"
+                          onClick={() => openDeleteModal(gameId as string)}
+                          aria-label="Delete game"
+                        >
+                          <FontAwesomeIcon icon={faTrash} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{ width: `${game.progress}%` }}
-                      ></div>
+                    <div className="game-info" style={{ 
+                      backgroundImage: `url(${game.image})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      position: 'relative'
+                    }}>
+                      <div className="game-info-blur"></div>
+                      <div className="game-info-content">
+                        <h3>{game.title}</h3>
+                        <p>{game.description?.length > 100 
+                            ? `${game.description.substring(0, 100)}...` 
+                            : game.description}</p>
+                        
+                        <div className="game-meta">
+                          Last played: {formatDate(game.lastUpdated)}
+                        </div>
+                      </div>
                     </div>
-                  </div> */}
-                  
-                  <div className="game-meta">
-                    Last played: {formatDate(game.lastUpdated)}
                   </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {deleteModalOpen && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h3>Delete Game</h3>
+                <p>Are you sure you want to delete this game? This cannot be undone.</p>
+                <div className="modal-actions">
+                  <button onClick={closeDeleteModal} className="cancel-button">
+                    Cancel
+                  </button>
+                  <button onClick={handleDelete} className="delete-button">
+                    Delete
+                  </button>
                 </div>
               </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Delete Game</h3>
-            <p>Are you sure you want to delete this game? This cannot be undone.</p>
-            <div className="modal-actions">
-              <button onClick={closeDeleteModal} className="cancel-button">
-                Cancel
-              </button>
-              <button onClick={handleDelete} className="delete-button">
-                Delete
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </section>
       </main>
       
       <style jsx>{`
-        .my-games-container {
-          max-width: 1200px;
-          margin: 0 auto;
+        .main-content {
+          padding-top: 80px; /* Same as header height to prevent content from being hidden */
+          position: relative;
+        }
+        
+        .parallax-background {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100vh;
+          background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-1.2.1&auto=format&fit=crop&w=2100&q=80');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          z-index: -1;
+          opacity: 0.4;
+        }
+        
+        .my-games-section {
+          background-color: rgba(10, 10, 20, 0.7);
+          backdrop-filter: blur(3px);
+          border-radius: 8px;
           padding: 2rem;
+          margin: 2rem 1rem;
+          margin-left: auto;
+          margin-right: auto;
         }
         
         .page-header {
@@ -235,8 +256,12 @@ export default function MyGames() {
         }
         
         h1 {
-          font-size: 2rem;
-          color: var(--text-color);
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin: 0;
+          background: linear-gradient(45deg, var(--primary-color), #9c88ff);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
         
         .create-button {
@@ -248,7 +273,7 @@ export default function MyGames() {
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.3s;
           display: flex;
           align-items: center;
           gap: 0.5rem;
@@ -256,12 +281,14 @@ export default function MyGames() {
         
         .create-button:hover {
           background-color: var(--hover-color);
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(124, 104, 242, 0.4);
         }
         
         .empty-state {
           text-align: center;
           padding: 3rem;
-          background-color: var(--card-bg);
+          background-color: rgba(255, 255, 255, 0.05);
           border-radius: 10px;
         }
         
@@ -284,7 +311,7 @@ export default function MyGames() {
           font-size: 1rem;
           font-weight: 600;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.3s;
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
@@ -292,28 +319,34 @@ export default function MyGames() {
         
         .empty-state-button:hover {
           background-color: var(--hover-color);
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(124, 104, 242, 0.4);
         }
         
         .games-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
           gap: 1.5rem;
         }
         
         .game-card {
-          background-color: var(--card-bg);
-          border-radius: 10px;
+          background-color: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
           overflow: hidden;
-          transition: transform 0.3s;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          height: 380px; /* Fixed height for compact cards */
+          display: flex;
+          flex-direction: column;
         }
         
         .game-card:hover {
           transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
         
         .game-image {
           position: relative;
-          height: 180px;
+          height: 140px; /* Smaller image height for compact design */
         }
         
         .game-image img {
@@ -321,120 +354,120 @@ export default function MyGames() {
           height: 100%;
           object-fit: cover;
         }
-
+        
         .game-category {
           position: absolute;
-          top: 1rem;
-          left: 1rem;
+          top: 10px;
+          left: 10px;
           background-color: rgba(0, 0, 0, 0.7);
+          color: white;
           padding: 0.3rem 0.8rem;
-          border-radius: 4px;
+          border-radius: 20px;
           font-size: 0.8rem;
         }
-
+        
         .game-actions {
           position: absolute;
-          bottom: 1rem;
-          right: 1rem;
+          bottom: 10px;
+          right: 10px;
           display: flex;
           gap: 0.5rem;
         }
-
+        
         .action-button {
-          width: 36px;
-          height: 36px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           display: flex;
           justify-content: center;
           align-items: center;
           border: none;
           cursor: pointer;
-          transition: background-color 0.3s;
+          transition: all 0.3s;
+          font-size: 0.8rem;
         }
-
+        
         .action-button.play {
           background-color: var(--primary-color);
           color: white;
         }
-
+        
         .action-button.play:hover {
           background-color: var(--hover-color);
+          transform: scale(1.1);
         }
-
+        
         .action-button.edit {
           background-color: #4caf50;
           color: white;
         }
-
+        
         .action-button.edit:hover {
           background-color: #388e3c;
+          transform: scale(1.1);
         }
-
+        
         .action-button.delete {
           background-color: #f44336;
           color: white;
         }
-
+        
         .action-button.delete:hover {
           background-color: #d32f2f;
+          transform: scale(1.1);
         }
-
+        
         .game-info {
-          padding: 1.2rem;
-        }
-
-        .game-info h3 {
-          font-size: 1.3rem;
-          margin-bottom: 0.5rem;
-        }
-
-        .game-description {
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 0.9rem;
-          margin-bottom: 1rem;
-        }
-
-        .game-progress {
-          margin-bottom: 1rem;
-        }
-
-        .progress-label {
+          padding: 0;
+          flex: 1;
           display: flex;
-          justify-content: space-between;
-          font-size: 0.9rem;
-          margin-bottom: 0.3rem;
+          flex-direction: column;
+          position: relative;
         }
-
-        .progress-bar {
-          height: 8px;
-          background-color: rgba(255, 255, 255, 0.1);
-          border-radius: 4px;
+        
+        .game-info-blur {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          backdrop-filter: blur(100px); /* Extreme blur as requested */
+          -webkit-backdrop-filter: blur(100px);
+          background-color: rgba(10, 10, 20, 0.7); /* Dark overlay for readability */
+          z-index: 1;
+        }
+        
+        .game-info-content {
+          position: relative;
+          z-index: 2;
+          padding: 1.2rem;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .game-info h3 {
+          font-size: 1.2rem;
+          margin-bottom: 0.6rem;
+          color: white;
+          line-height: 1.3;
+        }
+        
+        .game-info p {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 0.85rem;
+          line-height: 1.4;
+          margin-bottom: 0.8rem;
+          flex: 1; /* Allow description to take available space */
           overflow: hidden;
         }
-
-        .progress-fill {
-          height: 100%;
-          background-color: var(--primary-color);
-          border-radius: 4px;
-        }
-
+        
         .game-meta {
           font-size: 0.8rem;
-          color: rgba(255, 255, 255, 0.5);
+          color: rgba(255, 255, 255, 0.6);
+          margin-top: auto;
         }
-
-        @media (max-width: 768px) {
-          .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem;
-          }
-
-          .games-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
+        
         /* Modal styles */
         .modal-overlay {
           position: fixed;
@@ -442,7 +475,8 @@ export default function MyGames() {
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
+          background-color: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(5px);
           display: flex;
           justify-content: center;
           align-items: center;
@@ -455,11 +489,13 @@ export default function MyGames() {
           padding: 1.5rem;
           width: 90%;
           max-width: 400px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
         
         .modal-content h3 {
           margin-top: 0;
           margin-bottom: 1rem;
+          font-size: 1.3rem;
         }
         
         .modal-actions {
@@ -475,6 +511,7 @@ export default function MyGames() {
           border: none;
           font-weight: 500;
           cursor: pointer;
+          transition: all 0.3s;
         }
         
         .cancel-button {
@@ -493,6 +530,28 @@ export default function MyGames() {
         
         .delete-button:hover {
           background-color: #d32f2f;
+          transform: translateY(-2px);
+        }
+        
+        @media (max-width: 768px) {
+          .my-games-section {
+            padding: 1.5rem;
+            margin: 1rem;
+          }
+          
+          .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+          }
+          
+          h1 {
+            font-size: 2rem;
+          }
+          
+          .games-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     </div>

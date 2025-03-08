@@ -954,7 +954,7 @@ export default function EditGame() {
         
         .edit-container {
           max-width: 1200px;
-          margin: 0 auto;
+          margin: 80px auto;
           padding: 2rem;
         }
         

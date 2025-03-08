@@ -7,6 +7,7 @@ import formidable from 'formidable';
 import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
+import { remove } from 'fs-extra';
 
 // Configure Next.js to handle file uploads
 export const config = {
@@ -133,7 +134,7 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
     
     // Check if the current user is the author
     // @ts-ignore - TypeScript doesn't know about id on session.user
-    const userId = session.user.id || session.user.email;
+    const userId = (session.user as any).id || session.user.email;
     // const authorId = game.author.toString();
     // console.log('UserID user email:', userId);
     // console.log('New Game object:', game.author.toString());
@@ -244,7 +245,7 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
       }
       
       // Update image URL
-      updateData.image = `/uploads/${newFilename}`;
+      updateData.image = `/uploads/games/${game.gameDirName}/${newFilename}`;
     }
     
     // Process main game file
@@ -540,7 +541,7 @@ async function handleDeleteGame(req: NextApiRequest, res: NextApiResponse, id: s
     
     // Check if the current user is the author
     // @ts-ignore - TypeScript doesn't know about id on session.user
-    const userId = session.user.id || session.user.email;
+    const userId = (session.user as any).id || session.user.email;
     
     // Log the relevant values for debugging
     console.log('Delete check - User ID:', userId);
@@ -591,31 +592,8 @@ async function handleDeleteGame(req: NextApiRequest, res: NextApiResponse, id: s
         const gameDirPath = path.join(UPLOADS_DIR, 'games', game.gameDirName);
         console.log('Attempting to delete game directory:', gameDirPath);
         
-        if (fs.existsSync(gameDirPath)) {
-          // Use a recursive function to delete directory with all contents
-          const deleteDirectory = (dirPath: string) => {
-            if (fs.existsSync(dirPath)) {
-              fs.readdirSync(dirPath).forEach((file) => {
-                const curPath = path.join(dirPath, file);
-                if (fs.lstatSync(curPath).isDirectory()) {
-                  // Recursive call for directories
-                  deleteDirectory(curPath);
-                } else {
-                  // Delete file
-                  fs.unlinkSync(curPath);
-                }
-              });
-              // Delete the empty directory
-              fs.rmdirSync(dirPath);
-              console.log(`Deleted directory: ${dirPath}`);
-            }
-          };
-          
-          deleteDirectory(gameDirPath);
-          console.log('Game directory deleted successfully:', game.gameDirName);
-        } else {
-          console.log('Game directory not found:', gameDirPath);
-        }
+        await remove(gameDirPath);
+        console.log('Game directory deleted successfully:', game.gameDirName);
       } catch (error) {
         console.error('Error deleting game directory:', error);
       }

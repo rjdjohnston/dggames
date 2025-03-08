@@ -1,153 +1,99 @@
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSearch, faHeart, faPlay, faSpinner } from '@fortawesome/free-solid-svg-icons'
 import Header from '../components/Header'
-
-interface Game {
-  id: string
-  title: string
-  description: string
-  category: string
-  image: string
-  likes: number
-  plays: number
-}
+import GamesList from '../components/GamesList'
 
 export default function Discover() {
-  const [games, setGames] = useState<Game[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  
-  useEffect(() => {
-    setIsLoading(true);
-    
-    // Fetch games from API
-    fetch('/api/games')
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch games');
-        return response.json();
-      })
-      .then(data => {
-        setGames(Array.isArray(data) ? data : []);
-        setIsLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching games:', error);
-        setError('Failed to load games. Please try again later.');
-        setIsLoading(false);
-      });
-  }, []);
-
   return (
     <div className="container mx-auto">
       <Header />
 
-      <main>
-        <div className="discover-header">
-          <h1>Discover Games</h1>
-          <div className="search-bar">
-            <FontAwesomeIcon icon={faSearch} />
-            <input type="text" placeholder="Search games..." />
+      <main className="main-content">
+        <div className="parallax-background"></div>
+        
+        <section className="discover-section">
+          <div className="discover-header">
+            <h1>Discover Games</h1>
+            <p className="discover-description">
+              Explore our collection of AI-powered interactive games created by the community.
+              Find your next adventure or create your own!
+            </p>
           </div>
-        </div>
-
-        <section className="featured-section">
-          <h2>Featured Games</h2>
-          
-          {isLoading ? (
-            <div className="loading-container">
-              <FontAwesomeIcon icon={faSpinner} spin size="2x" />
-              <p>Loading games...</p>
-            </div>
-          ) : error ? (
-            <div className="error-container">
-              <p>{error}</p>
-              <button onClick={() => window.location.reload()}>Retry</button>
-            </div>
-          ) : games.length === 0 ? (
-            <div className="empty-state">
-              <h3>No games found</h3>
-              <p>Be the first to create a new game!</p>
-              <Link href="/create" className="create-button">
-                Create Game
-              </Link>
-            </div>
-          ) : (
-            <div className="game-grid">
-              {games.map((game) => (
-                <div key={game.id} className="game-card">
-                  <div className="game-image">
-                    <img src={game.image} alt={game.title} />
-                    <div className="game-category">{game.category}</div>
-                  </div>
-                  <div className="game-info">
-                    <Link href={`/game/${game.id}`}>
-                      <h3>{game.title}</h3>
-                    </Link>
-                    <p>{game.description?.length > 250 
-                      ? `${game.description.substring(0, 250)}...` 
-                      : game.description}</p>
-                    <div className="game-meta">
-                      <span>
-                        <FontAwesomeIcon icon={faHeart} /> {game.likes.toLocaleString()}
-                      </span>
-                      <span>
-                        <FontAwesomeIcon icon={faPlay} /> {game.plays.toLocaleString()} plays
-                      </span>
-                    </div>
-                    <Link href={`/game/${game.id}`} className="play-outline-button">
-                      PLAY <FontAwesomeIcon icon={faPlay} />
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          </section>
+          <section className="games-section">
+          <GamesList 
+            title="Featured Games" 
+            endpoint="/api/games" 
+            emptyMessage="Be the first to create a new game!"
+          />
         </section>
       </main>
 
       <style jsx>{`
-           
-        @media (max-width: 768px) {
-          .discover-header {
-            flex-direction: column;
-            align-items: flex-start;
-          }
-          
-          .search-bar {
-            width: 100%;
-          }
-          
-          .game-grid {
-            grid-template-columns: 1fr;
-          }
+        .main-content {
+          padding-top: 80px; /* Same as header height to prevent content from being hidden */
+          position: relative;
         }
         
-        .play-outline-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 0.6rem 1rem;
-          background-color: transparent;
-          color: var(--primary-color);
-          border: 1px solid var(--primary-color);
-          border-radius: 4px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-decoration: none;
-          transition: background-color 0.3s, color 0.3s;
-          margin-top: 0.5rem;
+        .parallax-background {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100vh;
+          background-image: url('https://images.unsplash.com/photo-1511512578047-dfb367046420?ixlib=rb-1.2.1&auto=format&fit=crop&w=2100&q=80');
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+          z-index: -1;
+          opacity: 0.4;
+        }
+        
+        .discover-section {
+          background-color: rgba(10, 10, 20, 0.7);
+          backdrop-filter: blur(3px);
+          border-radius: 8px;
+          padding: 2rem;
+          margin: 2rem 1rem;
+          margin-left: auto;
+          margin-right: auto;
+        }
+        
+        .discover-header {
+          margin-bottom: 2rem;
           text-align: center;
-          letter-spacing: 0.5px;
         }
         
-        .play-outline-button:hover {
-          background-color: var(--primary-color);
-          color: white;
+        h1 {
+          font-size: 2.5rem;
+          font-weight: 700;
+          margin: 0 0 1rem 0;
+          background: linear-gradient(45deg, var(--primary-color), #9c88ff);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        
+        .discover-description {
+          font-size: 1.1rem;
+          line-height: 1.6;
+          color: rgba(255, 255, 255, 0.9);
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        @media (max-width: 768px) {
+          .discover-section {
+            padding: 1.5rem;
+            margin: 1rem;
+          }
+          
+          h1 {
+            font-size: 2rem;
+          }
+          
+          .discover-description {
+            font-size: 1rem;
+          }
         }
       `}</style>
     </div>
   )
-} 
+}
