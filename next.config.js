@@ -4,7 +4,7 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['picsum.photos'],
+    domains: ['picsum.photos','grokgames.dev'],
     // Allow unoptimized images for avatar uploads
     unoptimized: true,
   },
