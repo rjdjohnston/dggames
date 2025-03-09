@@ -26,7 +26,8 @@ services:
       - TWITTER_CLIENT_SECRET=${TWITTER_CLIENT_SECRET}
     command: npm run dev
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
   mongo:
     image: mongo:4.4
@@ -36,6 +37,12 @@ services:
       - mongodb_data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=storygame
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # MongoDB Admin UI - helps with development
   mongo-express:
@@ -48,7 +55,8 @@ services:
       - ME_CONFIG_MONGODB_PORT=27017
       - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
 volumes:
   mongodb_data: 

@@ -26,7 +26,8 @@ services:
       - /app/node_modules
       - /app/.next
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
     restart: unless-stopped
 
   # MongoDB database
@@ -38,6 +39,12 @@ services:
       - mongodb_data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=dggames
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
 volumes:
