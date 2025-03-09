@@ -1,4 +1,5 @@
 node_modules
+src/public/uploads
 .next
 .env
 .env.local
