@@ -1,13 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '../auth/[...nextauth]';
+import { getSession } from 'next-auth/react';
 import dbConnect from '../../../lib/mongodb';
 import Game from '../../../models/Game';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const session = await getServerSession(req, res, authOptions);
+  const session = await getSession({ req });
 
-  if (!session || !session.user) {
+  if (!session) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
@@ -15,17 +14,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     try {
-      console.log('Session user ID:', session.user.id);
-      
       const games = await Game.find({ author: session.user.id })
         .sort({ lastUpdated: -1 });
       
-      console.log('Found games count:', games.length);
-      
+      // Ensure we're returning an array, even if empty
       return res.status(200).json(Array.isArray(games) ? games : []);
     } catch (error) {
       console.error('Error fetching games:', error);
-      return res.status(500).json({ message: 'Internal server error', error: String(error) });
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -28,24 +28,14 @@ export default function MyGames() {
   useEffect(() => {
     // Check if user is authenticated
     if (status === 'unauthenticated') {
-      // Instead of directly calling signIn(), use the router to redirect
-      router.push({
-        pathname: '/api/auth/signin',
-        query: { callbackUrl: window.location.href }
-      });
-      return;
+      signIn()
+      return
     }
 
-    if (status === 'authenticated' && session?.user) {
+    if (status === 'authenticated') {
       // Fetch games from the API
       fetch('/api/user/games')
-        .then(res => {
-          // Check if the response is ok
-          if (!res.ok) {
-            throw new Error(`API returned status: ${res.status}`);
-          }
-          return res.json();
-        })
+        .then(res => res.json())
         .then(data => {
           console.log('API response:', data);
           // Transform data to ensure each game has an id property
@@ -54,15 +44,15 @@ export default function MyGames() {
             id: game.id || game._id  // Use id if available, fallback to _id
           })) : [];
           console.log('Games array:', gamesArray);
-          setGames(gamesArray);
-          setIsLoading(false);
+          setGames(gamesArray)
+          setIsLoading(false)
         })
         .catch(error => {
-          console.error('Error fetching games:', error);
-          setIsLoading(false);
-        });
+          console.error('Error fetching games:', error)
+          setIsLoading(false)
+        })
     }
-  }, [status, session, router]);
+  }, [status])
 
   const handlePlay = (gameId: string) => {
     console.log('Playing game with ID:', gameId);

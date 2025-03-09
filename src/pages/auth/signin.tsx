@@ -14,14 +14,7 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { callbackUrl } = router.query
-  
-  // Ensure we have a valid callback URL
-  const redirectUrl = typeof callbackUrl === 'string' && callbackUrl 
-    ? decodeURIComponent(callbackUrl) 
-    : '/my-games'
-  
-  console.log('SignIn page loaded with callbackUrl:', callbackUrl);
-  console.log('Decoded redirectUrl:', redirectUrl);
+  const redirectUrl = typeof callbackUrl === 'string' ? callbackUrl : '/my-games'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -29,16 +22,11 @@ export default function SignIn() {
     setError('')
 
     try {
-      console.log('Attempting to sign in with credentials, redirectUrl:', redirectUrl);
-      
       const result = await signIn('credentials', {
         redirect: false,
         email,
         password,
-        callbackUrl: redirectUrl, // Pass the callback URL to NextAuth
       })
-
-      console.log('Sign in result:', result);
 
       if (result?.error) {
         setError('Invalid email or password')
@@ -47,10 +35,8 @@ export default function SignIn() {
       }
 
       // Redirect to the callback URL or to the homepage
-      console.log('Sign in successful, redirecting to:', redirectUrl);
       router.push(redirectUrl)
     } catch (error: unknown) {
-      console.error('Sign in error:', error);
       setError(getErrorMessage(error, 'An error occurred during sign in'))
       setIsLoading(false)
     }
@@ -58,9 +44,6 @@ export default function SignIn() {
 
   const handleOAuthSignIn = (provider: string) => {
     setIsLoading(true)
-    console.log(`Signing in with ${provider}, redirectUrl:`, redirectUrl);
-    
-    // Pass the callback URL to the OAuth provider
     signIn(provider, { callbackUrl: redirectUrl })
   }
 
