@@ -29,6 +29,16 @@ TWITTER_CLIENT_ID=your-twitter-client-id
 TWITTER_CLIENT_SECRET=your-twitter-client-secret
 ```
 
+### Generating a Secure Secret
+
+For production use, it's important to use a strong, random secret for NEXTAUTH_SECRET. You can generate one using OpenSSL:
+
+```bash
+openssl rand -base64 32
+```
+
+This will output a random 32-byte string encoded in base64, which is ideal for use as your NEXTAUTH_SECRET.
+
 ## Provider Setup Instructions
 
 ### Google OAuth Setup

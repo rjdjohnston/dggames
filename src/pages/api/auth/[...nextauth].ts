@@ -151,7 +151,15 @@ export const authOptions: NextAuthOptions = {
   },
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+}
+
+// Validate that NEXTAUTH_SECRET is set
+if (!process.env.NEXTAUTH_SECRET || process.env.NEXTAUTH_SECRET.length < 32) {
+  console.warn(
+    'Warning: NEXTAUTH_SECRET is not set or is too short. This is insecure! Set the NEXTAUTH_SECRET environment variable to at least 32 characters in production.'
+  );
 }
 
 // Export the NextAuth handler with the configuration

@@ -15,7 +15,8 @@ services:
       - WATCHPACK_POLLING=true
       - MONGODB_URI=mongodb://mongo:27017/storygame
       - MONGODB_DB=storygame
-      - NEXTAUTH_SECRET=your-secret-key-for-jwt-encryption
+      # Use a secure secret for development
+      - NEXTAUTH_SECRET=a-very-long-secret-value-at-least-32-chars-for-development
       - NEXTAUTH_URL=http://localhost:3000
       # OAuth provider credentials
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}

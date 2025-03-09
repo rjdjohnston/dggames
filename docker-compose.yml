@@ -1,3 +1,5 @@
+version: '3.8'
+
 name: dggames
 
 services:
@@ -13,7 +15,7 @@ services:
       - MONGODB_URI=mongodb://mongo:27017/dggames
       - MONGODB_DB=dggames
       - NEXTAUTH_URL=http://localhost:3000
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:SsT0LBAqH0DJtL64PV78L9LBkRIllasBPMszMUpbKH0=}
       # OAuth provider credentials
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
