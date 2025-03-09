@@ -63,7 +63,7 @@ export default function SignIn() {
         </div>
 
         {/* OAuth Provider Buttons */}
-        <div className="flex flex-col gap-3 mt-4">
+        {/* <div className="flex flex-col gap-3 mt-4">
           <button
             type="button"
             onClick={() => handleOAuthSignIn('google')}
@@ -99,7 +99,7 @@ export default function SignIn() {
             </span>
             Sign in with Twitter
           </button>
-        </div>
+        </div> */}
 
         <div className="mt-4 relative">
           <div className="absolute inset-0 flex items-center">
