@@ -45,7 +45,10 @@ export async function seedDatabase() {
         author: userId,
         progress: 0,
         likes: 2500,
-        plays: 12000
+        plays: 12000,
+        gameType: 'html5',
+        gameDirName: 'dragons-quest',
+        content: 'You are a brave knight on a quest to defeat the dragon that has been terrorizing the kingdom.'
       },
       {
         title: 'Space Explorer',
@@ -55,7 +58,10 @@ export async function seedDatabase() {
         author: userId,
         progress: 0,
         likes: 1800,
-        plays: 8000
+        plays: 8000,
+        gameType: 'javascript',
+        gameDirName: 'space-explorer',
+        content: 'As a space explorer, your mission is to discover new planets and establish contact with alien civilizations.'
       },
       {
         title: 'Murder Mystery',
@@ -65,7 +71,10 @@ export async function seedDatabase() {
         author: userId,
         progress: 0,
         likes: 3200,
-        plays: 15000
+        plays: 15000,
+        gameType: 'text',
+        gameDirName: 'murder-mystery',
+        content: 'A body has been found in the small town of Millfield. As the detective, it\'s your job to solve the case.'
       },
       {
         title: 'Zombie Apocalypse',
@@ -75,7 +84,10 @@ export async function seedDatabase() {
         author: userId,
         progress: 0,
         likes: 4100,
-        plays: 20000
+        plays: 20000,
+        gameType: 'unity',
+        gameDirName: 'zombie-apocalypse',
+        content: 'The world has been overrun by zombies. Your goal is to survive and find other survivors.'
       }
     ];
     

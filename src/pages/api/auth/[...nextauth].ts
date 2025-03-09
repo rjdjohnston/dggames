@@ -1,11 +1,50 @@
 import NextAuth from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
+import GoogleProvider from 'next-auth/providers/google'
+import GithubProvider from 'next-auth/providers/github'
+import TwitterProvider from 'next-auth/providers/twitter'
 import { compare } from 'bcryptjs'
 import dbConnect from '../../../lib/mongodb'
 import User from '../../../models/User'
+import { JWT } from 'next-auth/jwt'
+import { Session } from 'next-auth'
+
+// Extend the built-in session types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      provider?: string;
+    }
+  }
+}
+
+// Extend the built-in JWT types
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string;
+    provider?: string;
+  }
+}
 
 export default NextAuth({
   providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    }),
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID as string,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+    }),
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID as string,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET as string,
+      version: "2.0", // Use OAuth 2.0
+    }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -52,17 +91,51 @@ export default NextAuth({
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
+      }
+      if (account) {
+        token.provider = account.provider
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id
+        session.user.provider = token.provider
       }
       return session
+    },
+    async signIn({ user, account, profile }) {
+      // Only proceed if using an OAuth provider
+      if (account && account.provider !== 'credentials') {
+        try {
+          await dbConnect()
+          
+          // Check if user already exists
+          const existingUser = await User.findOne({ email: user.email })
+          
+          if (!existingUser) {
+            // Create a new user if they don't exist
+            const newUser = new User({
+              name: user.name,
+              email: user.email,
+              image: user.image,
+              // For OAuth users, we don't need a password, but our schema requires one
+              // Set a secure random password they'll never use
+              password: Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10),
+            })
+            
+            await newUser.save()
+          }
+        } catch (error) {
+          console.error('Error during OAuth sign in:', error)
+          return false
+        }
+      }
+      
+      return true
     }
   },
   jwt: {

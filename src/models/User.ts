@@ -26,6 +26,14 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  provider: {
+    type: String,
+    default: 'credentials',
+  },
+  providerAccountId: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -17,6 +17,13 @@ services:
       - MONGODB_DB=storygame
       - NEXTAUTH_SECRET=your-secret-key-for-jwt-encryption
       - NEXTAUTH_URL=http://localhost:3000
+      # OAuth provider credentials
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - TWITTER_CLIENT_ID=${TWITTER_CLIENT_ID}
+      - TWITTER_CLIENT_SECRET=${TWITTER_CLIENT_SECRET}
     command: npm run dev
     depends_on:
       - mongo
