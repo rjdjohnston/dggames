@@ -1,4 +1,4 @@
-import NextAuth from 'next-auth'
+import NextAuth, { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import GoogleProvider from 'next-auth/providers/google'
 import GithubProvider from 'next-auth/providers/github'
@@ -8,6 +8,8 @@ import dbConnect from '../../../lib/mongodb'
 import User from '../../../models/User'
 import { JWT } from 'next-auth/jwt'
 import { Session } from 'next-auth'
+import { User as NextAuthUser } from 'next-auth'
+import { Account, Profile } from 'next-auth'
 
 // Extend the built-in session types
 declare module "next-auth" {
@@ -20,6 +22,10 @@ declare module "next-auth" {
       provider?: string;
     }
   }
+  
+  interface User {
+    id?: string;
+  }
 }
 
 // Extend the built-in JWT types
@@ -30,7 +36,8 @@ declare module "next-auth/jwt" {
   }
 }
 
-export default NextAuth({
+// Export the NextAuth configuration as authOptions
+export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -87,11 +94,11 @@ export default NextAuth({
     error: '/auth/error',
   },
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account }: { token: JWT; user?: any; account?: any }) {
       if (user) {
         token.id = user.id
       }
@@ -100,14 +107,14 @@ export default NextAuth({
       }
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: JWT }) {
       if (session.user) {
         session.user.id = token.id
         session.user.provider = token.provider
       }
       return session
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: { user: any; account: any; profile?: any }) {
       // Only proceed if using an OAuth provider
       if (account && account.provider !== 'credentials') {
         try {
@@ -141,4 +148,7 @@ export default NextAuth({
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
   },
-}) 
+}
+
+// Export the NextAuth handler with the configuration
+export default NextAuth(authOptions) 
