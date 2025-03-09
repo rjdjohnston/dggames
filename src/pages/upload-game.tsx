@@ -1,4 +1,4 @@
-import { useState, useRef, FormEvent } from 'react'
+import { useState, useRef, FormEvent, ChangeEvent } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import Header from '../components/Header'
@@ -13,13 +13,13 @@ export default function UploadGame() {
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('Action')
   const [gameType, setGameType] = useState('html5')
-  const [mainFile, setMainFile] = useState(null)
-  const [assetFiles, setAssetFiles] = useState([])
-  const [thumbnailFile, setThumbnailFile] = useState(null)
+  const [mainFile, setMainFile] = useState<File | null>(null)
+  const [assetFiles, setAssetFiles] = useState<File[]>([])
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [zipFile, setZipFile] = useState(null)
+  const [zipFile, setZipFile] = useState<File | null>(null)
 
   // Redirect if not authenticated
   if (status === 'unauthenticated') {
@@ -96,6 +96,36 @@ export default function UploadGame() {
       setIsUploading(false)
     }
   }
+
+  const handleMainFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setMainFile(e.target.files[0]);
+    }
+  };
+
+  const handleThumbnailChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setThumbnailFile(e.target.files[0]);
+    }
+  };
+
+  const handleAssetFilesChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      // Convert FileList to array
+      const filesArray = Array.from(e.target.files);
+      setAssetFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  const handleZipFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setZipFile(e.target.files[0]);
+    }
+  };
+
+  const removeAssetFile = (index: number) => {
+    setAssetFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="upload-game-container">
@@ -186,7 +216,7 @@ export default function UploadGame() {
                 <input 
                   type="file" 
                   id="mainFile" 
-                  onChange={(e) => setMainFile(e.target.files[0])}
+                  onChange={handleMainFileChange}
                   className="hidden-input"
                 />
                 <label htmlFor="mainFile" className="file-button">
@@ -205,7 +235,7 @@ export default function UploadGame() {
                 <input 
                   type="file" 
                   id="assetFiles" 
-                  onChange={(e) => setAssetFiles(Array.from(e.target.files))}
+                  onChange={handleAssetFilesChange}
                   multiple
                   className="hidden-input"
                 />
@@ -227,7 +257,7 @@ export default function UploadGame() {
                 <input 
                   type="file" 
                   id="thumbnailFile" 
-                  onChange={(e) => setThumbnailFile(e.target.files[0])}
+                  onChange={handleThumbnailChange}
                   accept="image/*"
                   className="hidden-input"
                 />

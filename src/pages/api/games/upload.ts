@@ -8,12 +8,23 @@ import dbConnect from '../../../lib/mongodb';
 import Game from '../../../models/Game';
 import { ObjectId } from 'mongodb';
 import AdmZip from 'adm-zip';
+import { getErrorMessage, logError } from '../../../utils/errorHandling';
 
 export const config = {
   api: {
     bodyParser: false,
   },
 };
+
+// Define a type for formidable file
+interface FormidableFile {
+  filepath: string;
+  originalFilename?: string;
+  newFilename?: string;
+  mimetype?: string;
+  size?: number;
+  [key: string]: any;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const session = await getSession({ req });
@@ -41,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const options = {
       uploadDir: tempDir,
       keepExtensions: true,
-      multiples: true,
+      maxFileSize: 100 * 1024 * 1024, // 100MB
     };
     
     // Parse the form with a Promise wrapper
@@ -60,10 +71,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { fields, files } = formData;
     
     // Convert fields to string (formidable v4 returns arrays for fields)
-    const title = Array.isArray(fields.title) ? fields.title[0] : fields.title as string;
-    const description = Array.isArray(fields.description) ? fields.description[0] : fields.description as string;
-    const category = Array.isArray(fields.category) ? fields.category[0] : fields.category as string;
-    const gameType = Array.isArray(fields.gameType) ? fields.gameType[0] : fields.gameType as string;
+    const title = Array.isArray(fields.title) ? fields.title[0] : (fields.title || '') as string;
+    const description = Array.isArray(fields.description) ? fields.description[0] : (fields.description || '') as string;
+    const category = Array.isArray(fields.category) ? fields.category[0] : (fields.category || '') as string;
+    const gameType = Array.isArray(fields.gameType) ? fields.gameType[0] : (fields.gameType || '') as string;
     
     if (!title || !description || !category || !gameType) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -146,22 +157,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Handle asset files
     for (const key in files) {
       if (key.startsWith('assetFile_')) {
-        const assetFileArray = Array.isArray(files[key]) ? files[key] : [files[key]];
-        const assetFile = assetFileArray[0];
+        const fileOrFiles = files[key];
         
-        if (assetFile) {
-          const assetFilePath = assetFile.filepath;
-          const assetFileName = assetFile.originalFilename || path.basename(assetFilePath);
+        // Skip if undefined
+        if (!fileOrFiles) continue;
+        
+        // Convert to array and ensure it's properly typed
+        const assetFileArray: FormidableFile[] = Array.isArray(fileOrFiles) 
+          ? (fileOrFiles as unknown as FormidableFile[])
+          : [(fileOrFiles as unknown as FormidableFile)];
+        
+        // Make sure assetFileArray is defined and has at least one element
+        if (assetFileArray && assetFileArray.length > 0) {
+          const assetFile = assetFileArray[0];
           
-          // Check if the file is a zip file
-          if (assetFileName.toLowerCase().endsWith('.zip')) {
-            // Process zip file
-            await processZipFile(assetFilePath, assetFileName);
-          } else {
-            // Process regular asset file
-            const assetFileDest = path.join(gameFullPath, assetFileName);
-            await fsPromises.copyFile(assetFilePath, assetFileDest);
-            assetFilePaths.push(`/uploads/games/${gameDirName}/${assetFileName}`);
+          if (assetFile) {
+            const assetFilePath = assetFile.filepath;
+            const assetFileName = assetFile.originalFilename || path.basename(assetFilePath);
+            
+            // Check if the file is a zip file
+            if (assetFileName.toLowerCase().endsWith('.zip')) {
+              // Process zip file
+              await processZipFile(assetFilePath, assetFileName);
+            } else {
+              // Process regular asset file
+              const assetFileDest = path.join(gameFullPath, assetFileName);
+              await fsPromises.copyFile(assetFilePath, assetFileDest);
+              assetFilePaths.push(`/uploads/games/${gameDirName}/${assetFileName}`);
+            }
           }
         }
       }

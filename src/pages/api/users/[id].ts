@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { MongoClient, ObjectId } from 'mongodb'
+import { getErrorMessage, logError } from '../../../utils/errorHandling'
 
 // MongoDB connection details
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL
@@ -47,112 +48,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       user = await db.collection('users').findOne({ _id: new ObjectId(id) })
       if (user) lookupMethods.push('users._id ObjectId')
       console.log('Result of ObjectId lookup:', !!user)
-    } catch (error) {
-      console.log('Error looking up by ObjectId:', error.message)
+    } catch (error: unknown) {
+      console.log('Error looking up by ObjectId:', getErrorMessage(error))
     }
     
     // Method 2: Try to find by string ID in users collection
     if (!user) {
-      console.log('Trying to find user by string id')
-      user = await db.collection('users').findOne({ id: id })
-      if (user) lookupMethods.push('users.id string')
-      console.log('Result of string id lookup:', !!user)
-    }
-
-    // Method 3: Try to find by providerId in accounts collection
-    if (!user) {
-      console.log('Trying to find user by providerId in accounts')
-      const account = await db.collection('accounts').findOne({ providerId: id })
-      if (account) {
-        console.log('Found account with providerId:', account)
-        user = await db.collection('users').findOne({ _id: new ObjectId(account.userId) })
-        if (user) lookupMethods.push('accounts.providerId')
-        console.log('Result of providerId lookup:', !!user)
+      try {
+        console.log('Trying to find user by string ID')
+        user = await db.collection('users').findOne({ id: id })
+        if (user) lookupMethods.push('users.id string')
+        console.log('Result of string ID lookup:', !!user)
+      } catch (error: unknown) {
+        console.log('Error looking up by string ID:', getErrorMessage(error))
       }
     }
     
-    // Method 4: Try to find by userId in accounts collection
+    // Method 3: Try to find in accounts collection
     if (!user) {
-      console.log('Trying to find user by userId in accounts')
-      const account = await db.collection('accounts').findOne({ userId: id })
-      if (account) {
-        console.log('Found account with userId:', account)
-        user = await db.collection('users').findOne({ _id: new ObjectId(account.userId) })
-        if (user) lookupMethods.push('accounts.userId')
-        console.log('Result of userId lookup:', !!user)
-      }
-    }
-    
-    // Method 5: Try to find in games collection
-    if (!user) {
-      console.log('Trying to find user info in games collection')
-      const game = await db.collection('games').findOne({ 'author.id': id })
-      if (game && game.author) {
-        console.log('Found author info in game:', game.author)
-        // Return the author info from the game as our user
-        user = {
-          _id: id,
-          ...game.author
+      try {
+        console.log('Trying to find user in accounts collection')
+        const account = await db.collection('accounts').findOne({ userId: id })
+        if (account) {
+          user = await db.collection('users').findOne({ _id: new ObjectId(account.userId) })
+          if (user) lookupMethods.push('accounts.userId -> users._id')
         }
-        lookupMethods.push('games.author')
-        console.log('Result of games.author lookup:', !!user)
+        console.log('Result of accounts lookup:', !!user)
+      } catch (error: unknown) {
+        console.log('Error looking up in accounts:', getErrorMessage(error))
       }
     }
     
-    // Method 6: Last resort - check if this ID is the user's email
+    // Method 4: Try to find in nextauth_users collection (for older NextAuth versions)
     if (!user) {
-      console.log('Trying to find user by email')
-      user = await db.collection('users').findOne({ email: id })
-      if (user) lookupMethods.push('users.email')
-      console.log('Result of email lookup:', !!user)
+      try {
+        console.log('Trying to find user in nextauth_users collection')
+        user = await db.collection('nextauth_users').findOne({ id: id })
+        if (user) lookupMethods.push('nextauth_users.id')
+        console.log('Result of nextauth_users lookup:', !!user)
+      } catch (error: unknown) {
+        console.log('Error looking up in nextauth_users:', getErrorMessage(error))
+      }
     }
     
-    // If user not found, return 404 with debugging info
     if (!user) {
-      console.log('User not found with any method')
-      return res.status(404).json({ 
-        message: 'User not found',
-        id: id,
-        checkedMethods: [
-          'users._id (ObjectId)',
-          'users.id (string)',
-          'accounts.providerId',
-          'accounts.userId',
-          'games.author.id',
-          'users.email'
-        ]
-      })
+      return res.status(404).json({ message: 'User not found' })
     }
     
-    console.log('User found with method(s):', lookupMethods)
-    console.log('Raw user data:', JSON.stringify(user, null, 2))
-    
-    // Sanitize the user object before returning
-    const sanitizedUser = {
-      id: user._id?.toString() || id,
-      name: user.name || user.displayName || 'User',
-      email: user.email,
-      image: user.image || user.avatar || user.profileImage,
-      username: user.username,
-      displayName: user.displayName || user.name || 'User',
-      createdAt: user.createdAt
+    // Format the user data for the response
+    const userData = {
+      id: user._id.toString(),
+      name: user.name || '',
+      email: user.email || '',
+      image: user.image || '',
+      lookupMethods
     }
     
-    console.log('Returning sanitized user:', sanitizedUser)
-    return res.status(200).json(sanitizedUser)
-    
-  } catch (error) {
-    console.error('API error:', error)
-    return res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    return res.status(200).json(userData)
+  } catch (error: unknown) {
+    logError('user lookup', error)
+    return res.status(500).json({
+      message: 'Failed to retrieve user',
+      error: getErrorMessage(error),
     })
   } finally {
-    // Close the MongoDB connection
-    if (client) {
-      await client.close()
-      console.log('MongoDB connection closed')
-    }
+    if (client) await client.close()
   }
 } 

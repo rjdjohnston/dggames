@@ -4,6 +4,19 @@ import path from 'path';
 import { promises as fsPromises } from 'fs';
 import dbConnect from '../../../../lib/mongodb';
 import Game from '../../../../models/Game';
+import { getErrorMessage, logError } from '../../../../utils/errorHandling';
+import mongoose from 'mongoose';
+
+// Define a type for the game document
+interface GameDocument {
+  _id: mongoose.Types.ObjectId | string;
+  gameType: string;
+  content?: string;
+  files?: {
+    mainFile?: string;
+  };
+  [key: string]: any; // For other properties
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -20,9 +33,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await Game.findByIdAndUpdate(id, { $inc: { plays: 1 } });
       
       return res.status(200).json({ message: 'Play recorded successfully' });
-    } catch (error) {
-      console.error('Error recording play:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+    } catch (error: unknown) {
+      logError('recording play', error);
+      return res.status(500).json({ 
+        message: 'Failed to record play', 
+        error: getErrorMessage(error) 
+      });
     }
   }
   
@@ -31,11 +47,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       await dbConnect();
       
-      const game = await Game.findById(id).lean();
+      // First get the raw document
+      const rawGame = await Game.findById(id).lean();
       
-      if (!game) {
+      if (!rawGame) {
         return res.status(404).json({ message: 'Game not found' });
       }
+      
+      // Then cast it to our interface
+      const game = rawGame as unknown as GameDocument;
       
       // Handle text adventure games
       if (game.gameType === 'text') {
@@ -67,9 +87,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       res.setHeader('Content-Type', contentType);
       return res.send(fileContents);
-    } catch (error) {
-      console.error('Game API error:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+    } catch (error: unknown) {
+      logError('serving game files', error);
+      return res.status(500).json({ 
+        message: 'Failed to serve game files', 
+        error: getErrorMessage(error) 
+      });
     }
   }
   

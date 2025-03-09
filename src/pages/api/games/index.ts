@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import Game from '../../../models/Game';
 import { seedDatabase } from '../../../lib/seedDatabase';
+import { getErrorMessage, logError } from '../../../utils/errorHandling';
+import mongoose from 'mongoose';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect();
@@ -21,20 +23,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .lean();
       
       // Transform MongoDB _id to id for frontend consumption
-      const formattedGames = games.map(game => ({
-        id: game._id.toString(),
-        title: game.title,
-        description: game.description,
-        category: game.category,
-        image: game.image,
-        likes: game.likes,
-        plays: game.plays
-      }));
+      const formattedGames = games.map(game => {
+        // Safely access properties with type checking
+        const gameId = game._id ? (typeof game._id.toString === 'function' ? game._id.toString() : String(game._id)) : '';
+        
+        return {
+          id: gameId,
+          title: game.title || '',
+          description: game.description || '',
+          category: game.category || '',
+          image: game.image || '',
+          likes: typeof game.likes === 'number' ? game.likes : 0,
+          plays: typeof game.plays === 'number' ? game.plays : 0
+        };
+      });
       
       return res.status(200).json(formattedGames);
-    } catch (error) {
-      console.error('Error fetching games:', error);
-      return res.status(500).json({ message: 'Internal server error' });
+    } catch (error: unknown) {
+      logError('fetching games', error);
+      return res.status(500).json({ 
+        message: 'Failed to fetch games', 
+        error: getErrorMessage(error)
+      });
     }
   }
 
