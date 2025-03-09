@@ -95,11 +95,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ message: 'Like removed successfully' })
     }
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('API error:', error)
     return res.status(500).json({ 
       message: 'Server error', 
-      error: error.message 
+      error: error instanceof Error ? error.message : 'An unknown error occurred'
     })
   } finally {
     // Close the MongoDB connection
