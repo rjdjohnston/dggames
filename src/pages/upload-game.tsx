@@ -311,6 +311,7 @@ export default function UploadGame() {
           max-width: 800px;
           margin: 0 auto;
           padding: 2rem;
+          padding-top: 80px; /* Same as header height to prevent content from being hidden */
         }
         
         h1 {
