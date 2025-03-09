@@ -430,7 +430,9 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
       for (let i = 0; i < assetFilesCount; i++) {
         const assetFileKey = `assetFile_${i}`;
         if (files[assetFileKey]?.[0]) {
-          const assetFile = files[assetFileKey][0];
+          // We've already checked that files[assetFileKey][0] exists in the if condition
+          // Use non-null assertion or type assertion to tell TypeScript this is safe
+          const assetFile = files[assetFileKey]![0];
           const originalName = assetFile.originalFilename || `file_${Date.now()}`;
           
           // Check if the file is a zip file
