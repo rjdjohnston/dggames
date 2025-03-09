@@ -42,7 +42,7 @@ function getLocalPathFromUrl(urlPath: string): string {
     }
     
     // Otherwise, try to parse it as a URL
-    const parsedUrl = new URL(urlPath, 'http://localhost');
+    const parsedUrl = new URL(urlPath, 'http://grokgames.dev');
     return path.join(process.cwd(), 'public', parsedUrl.pathname);
   } catch (error) {
     console.error('Error parsing URL path:', urlPath, error);
