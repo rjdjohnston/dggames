@@ -207,7 +207,21 @@ export const authOptions: NextAuthOptions = {
       }
       
       return true
-    }
+    },
+    async redirect({ url, baseUrl }) {
+      console.log('Redirect callback called with:', { url, baseUrl });
+      
+      // If the URL is relative, prepend the base URL
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`;
+      }
+      // If the URL is already absolute but on the same host, allow it
+      else if (url.startsWith(baseUrl)) {
+        return url;
+      }
+      // Otherwise, redirect to the base URL
+      return baseUrl;
+    },
   },
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
