@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, FormEvent } from 'react'
 import { useRouter } from 'next/router'
 import { useSession } from 'next-auth/react'
 import Header from '../components/Header'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faUpload, faFile, faGamepad, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { getErrorMessage } from '../utils/errorHandling'
 
 export default function UploadGame() {
   const router = useRouter()
@@ -18,6 +19,7 @@ export default function UploadGame() {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [zipFile, setZipFile] = useState(null)
 
   // Redirect if not authenticated
   if (status === 'unauthenticated') {
@@ -34,57 +36,63 @@ export default function UploadGame() {
     )
   }
 
-  const handleUpload = async (e) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setIsUploading(true)
-    setError('')
-    setSuccess('')
-
-    if (!title || !description || !category || !gameType || !mainFile) {
-      setError('Please fill all required fields and upload the main game file')
-      setIsUploading(false)
+    
+    // Validate form
+    if (!title || !description || !category || !gameType) {
+      setError('Please fill in all required fields')
       return
     }
-
-    const formData = new FormData()
-    formData.append('title', title)
-    formData.append('description', description)
-    formData.append('category', category)
-    formData.append('gameType', gameType)
-    formData.append('mainFile', mainFile)
     
-    if (thumbnailFile) {
-      formData.append('thumbnailFile', thumbnailFile)
+    if (!mainFile && !zipFile) {
+      setError('Please upload a main file or a zip file')
+      return
     }
-
-    // Append asset files
-    if (assetFiles.length > 0) {
-      for (let i = 0; i < assetFiles.length; i++) {
-        formData.append(`assetFile_${i}`, assetFiles[i])
-      }
-    }
-
+    
+    setIsUploading(true)
+    setError('')
+    
     try {
+      const formData = new FormData()
+      formData.append('title', title)
+      formData.append('description', description)
+      formData.append('category', category)
+      formData.append('gameType', gameType)
+      
+      if (mainFile) {
+        formData.append('mainFile', mainFile)
+      }
+      
+      if (zipFile) {
+        formData.append('zipFile', zipFile)
+      }
+      
+      // Add asset files
+      assetFiles.forEach((file, index) => {
+        formData.append(`assetFile_${index}`, file)
+      })
+      
+      // Add thumbnail
+      if (thumbnailFile) {
+        formData.append('thumbnailFile', thumbnailFile)
+      }
+      
       const response = await fetch('/api/games/upload', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to upload game')
-      }
-
-      const data = await response.json()
-      setSuccess('Game uploaded successfully!')
       
-      // Redirect to the game page after a short delay
-      setTimeout(() => {
-        router.push(`/game/${data.game.id}`)
-      }, 2000)
-    } catch (error) {
-      console.error('Upload error:', error)
-      setError(error.message || 'Failed to upload game. Please try again.')
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to upload game')
+      }
+      
+      // Redirect to the game page
+      router.push(`/game/${data.game.id}`)
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to upload game. Please try again.'))
       setIsUploading(false)
     }
   }
@@ -99,7 +107,7 @@ export default function UploadGame() {
         {error && <div className="error-message">{error}</div>}
         {success && <div className="success-message">{success}</div>}
         
-        <form onSubmit={handleUpload} className="upload-form">
+        <form onSubmit={handleSubmit} className="upload-form">
           <div className="form-section">
             <h2>Game Details</h2>
             

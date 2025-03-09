@@ -8,6 +8,7 @@ import {
   faTag, faUser, faCalendar, faChevronLeft, faSpinner, faEdit
 } from '@fortawesome/free-solid-svg-icons'
 import Header from '../../components/Header'
+import { getErrorMessage } from '../../utils/errorHandling'
 
 interface Author {
   id?: string
@@ -44,47 +45,49 @@ export default function GameDetail() {
   const [hasLiked, setHasLiked] = useState(false)
   const [isLiking, setIsLiking] = useState(false)
 
+  const fetchGame = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/games/${id}`);
+      
+      if (!res.ok) {
+        throw new Error(`Failed to fetch game: ${res.status}`);
+      }
+      
+      const data = await res.json();
+      setGame(data);
+      
+      // Check what author data looks like
+      console.log('Author data in game:', data.author)
+      
+      // If author is just an ID string or object with ID, fetch author details
+      const authorId = typeof data.author === 'string' 
+        ? data.author 
+        : data.author?.id || data.author?._id;
+        
+      if (authorId) {
+        console.log('Fetching author details for ID:', authorId)
+        // Fetch author details from an API endpoint
+        fetch(`/api/users/${authorId}`)
+          .then(res => res.json())
+          .then(authorData => {
+            console.log('Author details fetched:', authorData)
+            setAuthorData(authorData)
+          })
+          .catch(err => {
+            console.error('Error fetching author details:', err)
+          })
+      }
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to load game details'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!id) return
-
-    fetch(`/api/games/${id}`)
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to fetch game details')
-        return response.json()
-      })
-      .then(data => {
-        console.log('Game data received:', data)
-        setGame(data)
-        
-        // Check what author data looks like
-        console.log('Author data in game:', data.author)
-        
-        // If author is just an ID string or object with ID, fetch author details
-        const authorId = typeof data.author === 'string' 
-          ? data.author 
-          : data.author?.id || data.author?._id;
-          
-        if (authorId) {
-          console.log('Fetching author details for ID:', authorId)
-          // Fetch author details from an API endpoint
-          fetch(`/api/users/${authorId}`)
-            .then(res => res.json())
-            .then(authorData => {
-              console.log('Author details fetched:', authorData)
-              setAuthorData(authorData)
-            })
-            .catch(err => {
-              console.error('Error fetching author details:', err)
-            })
-        }
-        
-        setIsLoading(false)
-      })
-      .catch(error => {
-        console.error('Error:', error)
-        setError('Could not load game details. Please try again later.')
-        setIsLoading(false)
-      })
+    fetchGame()
   }, [id])
 
   // Check if user has already liked the game

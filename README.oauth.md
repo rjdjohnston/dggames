@@ -107,3 +107,18 @@ TWITTER_CLIENT_SECRET=your-twitter-client-secret
 - Use environment variables for all sensitive credentials
 - Regularly rotate your client secrets
 - Consider implementing additional security measures like CSRF protection 
+
+try {
+  // Your code here
+} catch (error: unknown) {
+  console.error('Error:', error);
+  return res.status(500).json({ 
+    message: 'Server error', 
+    error: getErrorMessage(error)
+  });
+} 
+
+// utils/errorHandling.ts
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'An unknown error occurred';
+} 

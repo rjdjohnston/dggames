@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faUser, faLock } from '@fortawesome/free-solid-svg-icons'
 import { faGoogle, faGithub, faTwitter } from '@fortawesome/free-brands-svg-icons'
+import { getErrorMessage } from '../../utils/errorHandling'
 
 export default function SignIn() {
   const [email, setEmail] = useState('')
@@ -35,8 +36,8 @@ export default function SignIn() {
 
       // Redirect to the callback URL or to the homepage
       router.push(redirectUrl)
-    } catch (error) {
-      setError('An error occurred during sign in')
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'An error occurred during sign in'))
       setIsLoading(false)
     }
   }

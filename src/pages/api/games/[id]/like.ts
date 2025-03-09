@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]'
 import { MongoClient, ObjectId } from 'mongodb'
+import { getErrorMessage, logError } from '../../../../utils/errorHandling'
 
 // MongoDB connection details
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL
@@ -96,10 +97,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
   } catch (error: unknown) {
-    console.error('API error:', error)
+    logError('like handler', error)
     return res.status(500).json({ 
       message: 'Server error', 
-      error: error instanceof Error ? error.message : 'An unknown error occurred'
+      error: getErrorMessage(error)
     })
   } finally {
     // Close the MongoDB connection

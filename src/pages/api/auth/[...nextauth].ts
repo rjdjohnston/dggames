@@ -10,6 +10,7 @@ import { JWT } from 'next-auth/jwt'
 import { Session } from 'next-auth'
 import { User as NextAuthUser } from 'next-auth'
 import { Account, Profile } from 'next-auth'
+import { getErrorMessage, logError } from '../../../utils/errorHandling'
 
 // Extend the built-in session types
 declare module "next-auth" {
@@ -129,6 +130,8 @@ export const authOptions: NextAuthOptions = {
               name: user.name,
               email: user.email,
               image: user.image,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
               // For OAuth users, we don't need a password, but our schema requires one
               // Set a secure random password they'll never use
               password: Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10),
@@ -136,8 +139,9 @@ export const authOptions: NextAuthOptions = {
             
             await newUser.save()
           }
-        } catch (error) {
-          console.error('Error during OAuth sign in:', error)
+        } catch (error: unknown) {
+          logError('OAuth sign in', error)
+          console.error('Error during OAuth sign in:', getErrorMessage(error))
           return false
         }
       }

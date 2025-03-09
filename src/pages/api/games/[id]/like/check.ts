@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../../auth/[...nextauth]'
 import { MongoClient } from 'mongodb'
+import { getErrorMessage, logError } from '../../../../../utils/errorHandling'
 
 // MongoDB connection details
 const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.DATABASE_URL
@@ -16,7 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Check if the user is authenticated
   const session = await getServerSession(req, res, authOptions)
   if (!session || !session.user) {
-    return res.status(200).json({ hasLiked: false })
+    return res.status(401).json({ message: 'Unauthorized' })
   }
 
   // Get the game ID from the request
@@ -46,11 +47,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ hasLiked: !!existingLike })
     
-  } catch (error) {
-    console.error('API error:', error)
+  } catch (error: unknown) {
+    logError('like check handler', error)
     return res.status(500).json({ 
       message: 'Server error', 
-      error: error.message 
+      error: getErrorMessage(error)
     })
   } finally {
     // Close the MongoDB connection

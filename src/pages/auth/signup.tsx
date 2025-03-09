@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faLock, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { getErrorMessage } from '../../utils/errorHandling';
 
 export default function SignUp() {
   const [name, setName] = useState('');
@@ -40,8 +41,8 @@ export default function SignUp() {
 
       // Redirect to sign-in page
       router.push('/auth/signin?registered=true');
-    } catch (error) {
-      setError(error.message);
+    } catch (error: unknown) {
+      setError(getErrorMessage(error, 'Failed to create account'));
       setIsLoading(false);
     }
   };

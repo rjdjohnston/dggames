@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { remove } from 'fs-extra';
+import { getErrorMessage, logError } from '../../../utils/errorHandling';
 
 // Configure Next.js to handle file uploads
 export const config = {
@@ -99,11 +100,11 @@ async function handleGetGame(req: NextApiRequest, res: NextApiResponse, id: stri
     };
     
     return res.status(200).json(gameWithId);
-  } catch (error: any) {
-    console.error('API error:', error);
+  } catch (error: unknown) {
+    logError('handleGetGame', error);
     return res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message || 'Unknown error occurred' 
+      message: 'Failed to retrieve game', 
+      error: getErrorMessage(error)
     });
   } finally {
     if (client) await client.close();
@@ -508,11 +509,11 @@ async function handleUpdateGame(req: NextApiRequest, res: NextApiResponse, id: s
       id,
       updatedFields: Object.keys(updateData)
     });
-  } catch (error: any) {
-    console.error('API error:', error);
+  } catch (error: unknown) {
+    logError('handleUpdateGame', error);
     return res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message || 'Unknown error occurred' 
+      message: 'Failed to update game', 
+      error: getErrorMessage(error)
     });
   } finally {
     if (client) await client.close();
@@ -638,11 +639,11 @@ async function handleDeleteGame(req: NextApiRequest, res: NextApiResponse, id: s
     }
     
     return res.status(200).json({ message: 'Game deleted successfully' });
-  } catch (error: any) {
-    console.error('API error:', error);
+  } catch (error: unknown) {
+    logError('handleDeleteGame', error);
     return res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message || 'Unknown error occurred' 
+      message: 'Failed to delete game', 
+      error: getErrorMessage(error)
     });
   } finally {
     if (client) await client.close();
