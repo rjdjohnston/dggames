@@ -5,6 +5,8 @@ const nextConfig = {
   swcMinify: true,
   images: {
     domains: ['picsum.photos'],
+    // Allow unoptimized images for avatar uploads
+    unoptimized: true,
   },
   webpack: (config) => {
     // For handling hot reloading in Docker
@@ -13,6 +15,20 @@ const nextConfig = {
       aggregateTimeout: 300,
     }
     return config
+  },
+  async headers() {
+    return [
+      {
+        // Apply these headers to avatar images
+        source: '/uploads/avatars/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=60, must-revalidate',
+          },
+        ],
+      },
+    ]
   },
 }
 

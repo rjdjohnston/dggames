@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Avatar Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .avatar {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #333;
+      margin: 10px;
+    }
+    .test-section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    h2 {
+      margin-top: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avatar Image Test</h1>
+  
+  <div class="test-section">
+    <h2>Test File</h2>
+    <p>Testing if text files are accessible:</p>
+    <a href="test.txt" target="_blank">View test.txt</a>
+  </div>
+  
+  <div class="test-section">
+    <h2>Direct Avatar Files</h2>
+    <p>Testing if avatar images are accessible directly:</p>
+    <div id="avatarList">
+      <!-- Will be populated by JavaScript -->
+    </div>
+  </div>
+  
+  <script>
+    // Get all avatar files from the directory listing
+    const avatarFiles = [
+      'avatar_67cd00cc8d7944af7dd33eef_1741488577519.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741488630122.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741488666351.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741488731359.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741488789199.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741489136401.jpg',
+      'avatar_67cd00cc8d7944af7dd33eef_1741489209566.jpg'
+    ];
+    
+    const avatarList = document.getElementById('avatarList');
+    
+    avatarFiles.forEach(file => {
+      const container = document.createElement('div');
+      container.style.display = 'inline-block';
+      container.style.textAlign = 'center';
+      container.style.margin = '10px';
+      
+      const img = document.createElement('img');
+      img.src = file;
+      img.alt = file;
+      img.className = 'avatar';
+      img.onerror = () => {
+        img.style.border = '2px solid red';
+        img.style.opacity = '0.3';
+      };
+      img.onload = () => {
+        img.style.border = '2px solid green';
+      };
+      
+      const label = document.createElement('div');
+      label.textContent = file;
+      label.style.fontSize = '10px';
+      label.style.wordBreak = 'break-all';
+      label.style.maxWidth = '150px';
+      
+      container.appendChild(img);
+      container.appendChild(label);
+      avatarList.appendChild(container);
+    });
+  </script>
+</body>
+</html> 

@@ -21,11 +21,13 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       provider?: string;
+      role?: string;
     }
   }
   
   interface User {
     id?: string;
+    role?: string;
   }
 }
 
@@ -34,6 +36,8 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     provider?: string;
+    picture?: string;
+    role?: string;
   }
 }
 
@@ -99,21 +103,77 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user, account }: { token: JWT; user?: any; account?: any }) {
+    async jwt({ token, user, account, trigger, session }: { token: JWT; user?: any; account?: any; trigger?: string; session?: any }) {
+      console.log('JWT callback called with trigger:', trigger);
+      
+      // Initial sign in
       if (user) {
-        token.id = user.id
+        token.id = user.id;
+        token.picture = user.image;
+        token.role = user.role || 'user';
+        if (account) {
+          token.provider = account.provider;
+        }
       }
-      if (account) {
-        token.provider = account.provider
+      
+      // Handle session update
+      if (trigger === 'update' && session) {
+        console.log('Session update triggered with:', session);
+        
+        // Update the token with the new session data
+        if (session.role) {
+          console.log('Updating token role to:', session.role);
+          token.role = session.role;
+        }
+        
+        if (session.user?.role) {
+          console.log('Updating token role from user to:', session.user.role);
+          token.role = session.user.role;
+        }
+        
+        if (session.user?.image) {
+          console.log('Updating token picture to:', session.user.image);
+          token.picture = session.user.image;
+        }
       }
-      return token
+      
+      return token;
     },
+    
     async session({ session, token }: { session: any; token: JWT }) {
-      if (session.user) {
-        session.user.id = token.id
-        session.user.provider = token.provider
+      console.log('Session callback called with token:', token);
+      
+      if (token) {
+        session.user.id = token.id;
+        session.user.provider = token.provider;
+        session.user.image = token.picture;
+        session.user.role = token.role || 'user';
+        
+        // Always fetch latest user data to ensure we have the most up-to-date role
+        try {
+          await dbConnect();
+          const user = await User.findById(token.id);
+          if (user) {
+            // Update session with latest user data
+            session.user.image = user.image || session.user.image;
+            session.user.role = user.role || 'user';
+            
+            // Also update the token for future session refreshes
+            token.role = user.role;
+            token.picture = user.image || token.picture;
+            
+            console.log('Updated session with database data:', {
+              role: user.role,
+              image: user.image
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data for session:', error);
+        }
       }
-      return session
+      
+      console.log('Returning session with role:', session.user.role);
+      return session;
     },
     async signIn({ user, account, profile }: { user: any; account: any; profile?: any }) {
       // Only proceed if using an OAuth provider

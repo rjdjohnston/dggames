@@ -25,7 +25,8 @@ export async function seedDatabase() {
         email: 'demo@example.com',
         password: await hash('password123', 10),
         image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
-        bio: 'This is a demo user account'
+        bio: 'This is a demo user account',
+        role: 'user' // Explicitly set role to user
       });
       
       await user.save();
@@ -33,6 +34,34 @@ export async function seedDatabase() {
       console.log('Demo user created');
     } else {
       userId = existingUser._id;
+    }
+    
+    // Create admin user if not exists
+    const existingAdmin = await User.findOne({ email: 'admin@example.com' });
+    let adminId;
+    
+    if (!existingAdmin) {
+      const admin = new User({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        password: await hash('admin123', 10),
+        image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
+        bio: 'This is an admin account with full access to the system',
+        role: 'admin' // Set role to admin
+      });
+      
+      await admin.save();
+      adminId = admin._id;
+      console.log('Admin user created');
+    } else {
+      adminId = existingAdmin._id;
+      
+      // Ensure the admin user has the admin role
+      if (existingAdmin.role !== 'admin') {
+        existingAdmin.role = 'admin';
+        await existingAdmin.save();
+        console.log('Updated existing user to admin role');
+      }
     }
     
     // Sample games data
@@ -68,7 +97,7 @@ export async function seedDatabase() {
         description: 'Solve the case of a mysterious murder in a small town filled with secrets.',
         category: 'Mystery',
         image: 'https://picsum.photos/id/20/400/225',
-        author: userId,
+        author: adminId, // Assign this game to the admin user
         progress: 0,
         likes: 3200,
         plays: 15000,
@@ -81,7 +110,7 @@ export async function seedDatabase() {
         description: 'Survive in a world overrun by zombies, where every decision could be your last.',
         category: 'Horror',
         image: 'https://picsum.photos/id/60/400/225',
-        author: userId,
+        author: adminId, // Assign this game to the admin user
         progress: 0,
         likes: 4100,
         plays: 20000,
